@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Rockpool - Cookbook</title>
+        <link rel="stylesheet" href="http://flotil.la/shipshape/css/jquery.fancybox.min.css">
+        <link rel="stylesheet" href="http://flotil.la/shipshape/css/pure-min.css">
+        <link rel="stylesheet" href="http://flotil.la/shipshape/css/rockpool.css">
+        <link rel="stylesheet" href="../cookbook.css">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="viewport" content="width = device-width, user-scalable = no, initial-scale = 1.0">
+
+        <style type="text/css">
+
+            .buttons, .buttons li {
+                list-style:none;
+                margin:0;
+                padding:0;
+                color:#CC0000;
+                text-align: center;
+            }
+            .buttons {
+                padding-top:20px;
+            }
+            .buttons li {
+                display:inline-block;
+                background:#FFFFFF;
+                width:80px;
+                height:50px;
+                border-radius:10px;
+                font-size:40px;
+                font-weight:bold;
+                line-height:50px;
+            }
+            .buttons li span {
+                display:block;
+                font-size:20px;
+                color:#FFF;
+                font-weight:normal;
+                line-height:30px;
+            }
+            .buttons li:nth-child(1){
+                border-bottom-left-radius:20px;
+            }
+            .buttons li:nth-child(4){
+                border-bottom-right-radius:20px;
+            }
+            .buttons li.active {
+                box-shadow:0px 0px 15px #FFF;
+            }
+            .buttons li.on {
+                color:#00CC00;
+            }
+
+            .reaction {
+                width:325px;
+                margin:0 auto;
+                color:#FFF;
+                text-align:center;
+            }
+
+            .results li {
+                font-size:20px;
+                line-height:30px;
+            }
+
+            .countdown {
+                font-size:50px;
+            }
+
+
+            .scoreboard {
+              background:#222222;
+              overflow:hidden;
+              padding:5px;
+              margin:5px;
+              border:5px solid #000;
+              border-right-color:#111;
+              border-top-color:#3E3E3E;
+              border-left-color:#333;
+            }
+
+            .scoreboard div {
+              background:#333333;
+              width:3px;
+              height:3px;
+              border-radius:50%;
+              margin:1px;
+              float:left;
+            }
+
+            .scoreboard .buffer {
+              opacity:0.1;
+            }
+
+            .scoreboard .lit {
+              background:#FFCC00;
+              box-shadow:0px 0px 8px rgba(255,200,0,0.5);
+            }
+
+            .scoreboard .clear {
+              clear:left;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="main">
+            <div style="margin: 0px auto;width:100%;">
+                <div class="app">
+                    <header><h1>Reaction Time</h1></header>
+
+                    <div class="reaction">
+                    </div>
+
+                    <ul class="buttons">
+                        <li>1<span>P1</span></li>
+                        <li>2<span>P2</span></li>
+                        <li>3<span>P3</span></li>
+                        <li>4<span>P4</span></li>
+                    </ul>
+                </div>
+                <div class="modules icon-palette">
+                    <header><h1>Modules</h1></header>
+                </div>
+            </div>
+        </div>
+
+        <div style="display:none;" class="palettes"></div>
+
+        <script src="http://flotil.la/shipshape/js/lib/jquery-2.1.1.min.js"></script>
+        <script src="http://flotil.la/shipshape/js/lib/fastclick.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.languify.js"></script>
+        <script src="http://flotil.la/shipshape/js/socket.io.min.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.widget.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.rule.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.inputs.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.outputs.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.converters.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.palette.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.module.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.modules.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.client.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.save.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.find-hosts.worker.js"></script>
+        <script src="../lib/scoreboard.js"></script>
+        <script src="../cookbook.js"></script>
+
+        <script src="http://flotil.la/shipshape/js/lib/jquery.fancybox.min.js"></script>
+
+        <script>
+            "use strict";
+
+
+
+            var myApp = function(){
+                self.requires = ['touch','rainbow'];
+                self.running = null;
+                self.interval = null;
+
+                self.r = 1;
+                self.g = 1;
+                self.b = 1;
+
+                self.touch = rockpool.firstOfType('touch');
+                self.rainbow = rockpool.firstOfType('rainbow');
+
+                self.light_on = false;
+                self.light_auto = false;
+
+                self.last_touch_one = false;
+                self.last_touch_two = false;
+
+                self.hue = 0;
+
+                self.t_last = 0;
+
+                self.time_countdown = 3 * 1000;
+                self.time_max = 4 * 1000;
+
+                self.dom_results = $('<div>').addClass('results scoreboard').appendTo('.reaction');
+
+                self.scoreboard = new scoreboard(10,6,self.dom_results);
+
+                self.times = [0,0,0,0];
+                self.keys = [49,50,51,52];
+                self.results = [99999999,99999999,99999999,99999999]; // :D
+                self.logged = [0,0,0,0];
+
+                self.reaction_running = false;
+
+                self.score_index = 0;
+
+                self.millis = function() {
+                    return window.performance.now() || (new Date()).getTime();
+                }
+
+                self.reaction_run = function(){
+
+                  // Get elapsed time
+                    var t_delta = self.millis() - self.t_last;
+                  
+                  if(t_delta > self.time_countdown){
+                    self.scoreboard.blit_word(0,0,'    Go!   ');
+                    self.setRainbow(0,1,0);
+
+                        var result_index = self.results.length;
+                    
+                    while(result_index--){
+                      self.results[result_index] = self.times[result_index] > 0 ? ((self.times[result_index] - self.t_last - self.time_countdown) / 1000) : 99999999;
+                      
+                      if(self.results[result_index] != 99999999 && !self.logged[result_index]){
+                        self.logged[result_index] = 1;
+                        self.scoreboard.blit_word(0,8 * (self.score_index+2),'P' + (result_index + 1) + ': ' + self.results[result_index].toFixed(4));
+                        self.score_index++;
+                      }
+                    }
+                    
+                    self.scoreboard.blit_word(0,8,'    ' + ((self.millis() - self.t_last - self.time_countdown) / 1000).toFixed(4).toString());
+                    
+                    if(self.results.indexOf(99999999) == -1 || t_delta > self.time_countdown + self.time_max){
+                        self.t_last = self.millis();
+                        self.reaction_running = false;
+                      
+                        var winning_value = self.results.reduce(function(a,b){return Math.min(a,b)});
+                        var winning_index = self.results.indexOf(winning_value);
+
+                        if(self.results.indexOf(winning_value, winning_index + 1) != -1){
+                           var also_winning_index = self.results.indexOf(winning_value, winning_index + 1);
+                            self.scoreboard.blit_word(0,0,'   Draw!  ');
+                            self.scoreboard.blit_word(0,8,'          ');
+                        }
+                        else
+                        {
+
+                            self.scoreboard.blit_word(0,0,'-P' + (winning_index+1) + ' wins!-');
+                            self.scoreboard.blit_word(0,8,'          ');
+                        }
+                    }
+                  
+                        return;
+                    }
+                  
+
+                  var countdown = Math.ceil((self.time_countdown-t_delta) / 1000);
+                  if(countdown == 0) {
+                    self.setRainbow(0,1,0);
+                  }
+                  else
+                  {
+                    self.scoreboard.blit_word(0,0,'          ');
+                    self.setRainbow(1,0,0);
+                  }
+
+                }
+
+                self.reaction_start = function(){
+                  self.scoreboard.clear();
+                  self.score_index = 0;
+                  self.reaction_running = true;
+                  self.dom_results.find('li').remove();
+                  self.results = [99999999,99999999,99999999,99999999];
+                  self.logged = [0,0,0,0];
+                  self.times = [0,0,0,0];
+                  self.time_countdown = Math.round(1000 + ((5000) * Math.random()))
+                  self.t_last = self.millis();
+                }
+
+                self.run = function(){
+
+                    if(self.running) return false;
+                    self.running = true;
+
+                    self.touch = rockpool.firstOfType('touch');
+                    self.rainbow = rockpool.firstOfType('rainbow');
+
+                    self.interval = setInterval(self.mainLoop,1000/60);
+
+                }
+
+                self.stop = function(){
+
+                    self.running = false;
+                    clearInterval(self.interval);
+
+                }
+
+                self.HSVtoRGB = function(h, s, v) {
+                    var r, g, b, i, f, p, q, t;
+                    if (arguments.length === 1) {
+                        s = h.s, v = h.v, h = h.h;
+                    }
+                    i = Math.floor(h * 6);
+                    f = h * 6 - i;
+                    p = v * (1 - s);
+                    q = v * (1 - f * s);
+                    t = v * (1 - (1 - f) * s);
+                    switch (i % 6) {
+                        case 0: r = v, g = t, b = p; break;
+                        case 1: r = q, g = v, b = p; break;
+                        case 2: r = p, g = v, b = t; break;
+                        case 3: r = p, g = q, b = v; break;
+                        case 4: r = t, g = p, b = v; break;
+                        case 5: r = v, g = p, b = q; break;
+                    }
+                    return {
+                        r: r,
+                        g: g,
+                        b: b
+                    };
+                }
+
+                self.setRainbow = function(r, g, b){
+                    self.rainbow.outputs.LED.data.r = r;
+                    self.rainbow.outputs.LED.data.g = g;
+                    self.rainbow.outputs.LED.data.b = b;
+                    self.rainbow.outputs.LED.data.brightness = 1.0;
+                }
+
+                self.mainLoop = function(){
+                    var touch_one   = self.touch.inputs.button.data[1] > 0;
+                    var touch_two   = self.touch.inputs.button.data[2] > 0;
+                    var touch_three = self.touch.inputs.button.data[3] > 0;
+                    var touch_four  = self.touch.inputs.button.data[4] > 0;
+
+                    $('.buttons li:eq(0)').toggleClass('active', touch_one);
+                    $('.buttons li:eq(1)').toggleClass('active', touch_two);
+                    $('.buttons li:eq(2)').toggleClass('active', touch_three);
+                    $('.buttons li:eq(3)').toggleClass('active', touch_four);
+
+                    if(self.reaction_running){
+
+                        var t = millis();
+
+                        if(touch_one) self.handlePress(0,t);
+                        if(touch_two) self.handlePress(1,t);
+                        if(touch_three) self.handlePress(2,t);
+                        if(touch_four) self.handlePress(3,t);
+
+                        self.reaction_run();
+                    }
+                    else
+                    {
+
+                        var t_delta = self.millis() - self.t_last;
+                        if (t_delta > 3000){
+                      
+                            self.scoreboard.blit_word(0,0,'Hit button');
+                            self.scoreboard.blit_word(0,8,' to start!');
+
+                            if(touch_one || touch_two || touch_three || touch_four) {
+                                console.log("Starting game!");
+                                self.reaction_start();
+                            }
+                        }
+                    }
+
+
+                    self.rainbow.sync();
+                    
+                }
+
+                self.handlePress = function(idx, t){
+                    if(t - self.t_last <= self.time_countdown) return;
+                      
+                    if(idx > -1 && times[idx] == 0) {
+
+                      times[idx] = t;
+                    }
+                }
+
+                return self;
+
+            }
+
+            rockpool.runCookbookApp(myApp());
+        </script>
+    </body>
+</html>

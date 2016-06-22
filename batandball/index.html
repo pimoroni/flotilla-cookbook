@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Rockpool - Cookbook</title>
+        <link rel="stylesheet" href="http://flotil.la/shipshape/css/jquery.fancybox.min.css">
+        <link rel="stylesheet" href="http://flotil.la/shipshape/css/pure-min.css">
+        <link rel="stylesheet" href="http://flotil.la/shipshape/css/rockpool.css">
+        <link rel="stylesheet" href="../cookbook.css">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="viewport" content="width = device-width, user-scalable = no, initial-scale = 1.0">
+
+        <style type="text/css">
+
+            @import url(https://fonts.googleapis.com/css?family=PT+Mono);
+
+            .canvas {
+                width:400px;
+                margin:0 auto;
+                margin-top:10px;
+            }
+
+            .score {
+                width:420px;
+                margin:0 auto;
+                margin-top:10px;
+            }
+
+            .field {
+              background:#000000;
+              position:relative;
+              border:10px solid #FFF;
+            }
+
+            .field:before {
+              content:'';
+              display:block;
+              width:100%;
+              height:0;
+              border-top:4px dotted #FFF;
+              position:absolute;
+              left:0;
+              top:50%;
+              margin-top:-2px;
+            }
+
+            .score ul, .score li {
+              list-style:none;
+              margin:0;
+              padding:0;
+            }
+
+            .score li {
+              float:left;
+              width:210px;
+              text-align:center;
+              font-family:'PT Mono';
+              font-size:12px;
+              color:#FFF;
+            }
+
+            .score li strong {
+              font-weight:700;
+              font-size:50px;
+              display:block;
+            }
+
+            .ball {
+              background:#FFFFFF;
+              border-radius:50%;
+              position:absolute;
+            }
+
+            .paddle {
+              background:#EEEEEE;
+              position:absolute;
+            }
+
+        </style>
+    </head>
+    <body>
+        <div class="main">
+            <div class="canvas">
+
+            </div>
+            <div class="score">
+            <ul>
+            <li>Computer<strong>00</strong></li>
+            <li>Player 1<strong>00</strong></li>
+            </ul>
+            </div>
+        </div>
+
+        <div style="display:none;" class="palettes"></div>
+
+        <script src="http://flotil.la/shipshape/js/lib/jquery-2.1.1.min.js"></script>
+        <script src="http://flotil.la/shipshape/js/lib/fastclick.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.languify.js"></script>
+        <script src="http://flotil.la/shipshape/js/socket.io.min.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.widget.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.rule.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.inputs.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.outputs.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.converters.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.palette.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.module.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.modules.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.client.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.save.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.find-hosts.worker.js"></script>
+        <script src="../cookbook.js"></script>
+
+        <script src="http://flotil.la/shipshape/js/lib/jquery.fancybox.min.js"></script>
+
+        <script type="text/javascript">
+
+            "use strict";
+
+
+            var width = 400;
+            var height = 400;
+
+            var field = new Field(width, height);
+
+            var player = new Player(field, height - 20);
+            var computer = new Computer(field, 10);
+            var ball = new Ball(field, 200, 300);
+
+            var keysDown = {};
+
+            var render = function () {
+                player.render();
+                computer.render();
+                ball.render();
+            };
+
+            function Vector2d(x, y) {
+                this.x = x;
+              this.y = y;
+            }
+
+            Vector2d.prototype.rotate = function(origin, angle) {
+                var radians = (Math.PI / 180) * angle,
+                    cos = Math.cos(radians),
+                    sin = Math.sin(radians),
+                    nx = (cos * (this.x - origin.x)) + (sin * (this.y - origin.y)) + origin.x,
+                    ny = (cos * (this.y - origin.y)) + (sin * (this.x - origin.x)) + origin.y;
+                this.x = nx;
+                this.y = ny;
+            }
+
+            Vector2d.prototype.magnitude = function(){
+               return Math.abs(Math.sqrt((this.x*this.x) + (this.y*this.y)));
+            }
+
+            Vector2d.prototype.add = function(vector){
+              this.x += vector.x;
+              this.y += vector.y;
+            }
+
+            function Field(width, height){
+              this.width = width;
+              this.height = height;
+              this.dom = $('<div>').addClass('field').css({
+                  width:width,
+                  height:height
+              }).appendTo('.canvas');
+            }
+
+            function Paddle(field, x, y, width, height) {
+                this.field = field;
+                this.position = new Vector2d(x, y);
+                this.velocity = new Vector2d(0,0);
+                this.width = width;
+                this.height = height;
+                this.paddle = $('<div>').addClass('paddle').appendTo(field.dom);
+            }
+
+            Paddle.prototype.render = function () {
+                this.paddle.css({
+                    left:this.position.x,
+                    top:this.position.y,
+                    width:this.width,
+                    height:this.height
+                })
+            };
+
+            Paddle.prototype.move = function (x, y) {
+                this.position.x += x;
+                this.position.y += y;
+                this.velocity.x = x;
+                this.velocity.y = y;
+                
+                if (this.position.x < 0) {
+                    this.position.x = 0;
+                    this.velocity.x = 0;
+                } else if (this.position.x + this.width > this.field.width) {
+                    this.position.x = this.field.width - this.width;
+                    this.velocity.x = 0;
+                }
+            };
+
+            function Computer(field, y) {
+                this.field = field;
+                var left = (field.width / 2) - 25;
+                this.paddle = new Paddle(field, left, y, 50, 10);
+                this.cycle_count = 0;
+            }
+
+            Computer.prototype.render = function () {
+                this.paddle.render();
+            };
+
+            Computer.prototype.update = function (ball) {
+                this.cycle_count++;
+                
+                var distance = Math.abs(ball.position.y - this.paddle.position.y) / field.height; // Distance normalized from 1 to 0
+                
+                // Over-estimate where the ball might land
+                var x_pos = ball.position.x + (ball.velocity.x * 10 * distance);
+                
+                // Short sightedness
+                if(distance > 0.5) return;
+                
+                // Don't move when the ball is moving away from paddle
+                // Alternatively, could trend toward the center, but this makes the computer player super hard to beat
+                if(ball.velocity.y < 0 && this.paddle.position.y > field.height / 2) return;
+                if(ball.velocity.y > 0 && this.paddle.position.y < field.height / 2) return;
+                
+
+                var diff = -((this.paddle.position.x + (this.paddle.width / 2)) - x_pos);
+                if (diff < 0 && diff < -4) {
+                    diff = -3;
+                } else if (diff > 0 && diff > 4) {
+                    diff = 3;
+                }
+                this.paddle.move(diff, 0);
+            };
+
+            function Player(field, y) {
+                this.field = field;
+                var left = (field.width / 2) - 25;
+                this.paddle = new Paddle(field, left, y, 50, 10);
+            }
+
+            Player.prototype.render = function () {
+                this.paddle.render();
+            };
+
+            Player.prototype.update = function (ball, control_value) {
+
+                //this.paddle.move(slider_value * 4, 0);
+
+                var old_position_x = this.paddle.position.x;
+
+                this.paddle.position.x = (this.field.width/2) - 25 + (control_value * ((this.field.width/2)-25));
+
+                this.paddle.velocity.x = old_position_x - this.paddle.position.x;
+
+                /*for (var key in keysDown) {
+                    var value = Number(key);
+                    if (value == 37) {
+                        this.paddle.move(-4, 0);
+                    } else if (value == 39) {
+                        this.paddle.move(4, 0);
+                    } else {
+                        this.paddle.move(0, 0);
+                    }
+                }*/
+            };
+
+
+            function Ball(field, x, y) {
+                this.field = field;
+                this.radius = 5;
+                //this.tilt = new Vector2d(0,0);
+                this.spin = 0;
+                this.position = new Vector2d(x,y);
+                this.velocity = new Vector2d(0,6);
+                this.ball = $('<div>').addClass('ball').appendTo(field.dom);
+
+                this.ball.css({
+                    width:this.radius * 2,
+                  height:this.radius * 2,
+                  'margin-left':-this.radius,
+                  'margin-top':-this.radius
+                })
+            }
+
+            Ball.prototype.render = function () {
+                this.ball.css({
+                    left:this.position.x,
+                    top:this.position.y
+                })
+            };
+
+            Ball.prototype.update = function (paddle1, paddle2) {
+                this.position.add(this.velocity);
+                //this.position.add(this.tilt);
+                this.velocity.rotate(this.position, this.spin);
+                
+                var bounds_left = this.position.x - this.radius;
+                var bounds_top = this.position.y - this.radius;
+                var bounds_right = this.position.x + this.radius;
+                var bounds_bottom = this.position.y + this.radius;
+
+                if (bounds_left < 0) {
+                    this.position.x = this.radius;
+                    this.velocity.x = -this.velocity.x;
+                } else if (bounds_right > this.field.width) {
+                    this.position.x = this.field.width - this.radius;
+                    this.velocity.x = -this.velocity.x;
+                }
+
+                if (bounds_top < 0 || bounds_bottom > this.field.height) {
+                        if(bounds_top < 0){
+                        var score = parseInt($('.score li:eq(1) strong').text()) + 1;
+                      if(score < 10) score = '0' + score;
+                      $('.score li:eq(1) strong').text(score);
+                    }
+                        if(bounds_bottom > this.field.height){
+                        var score = parseInt($('.score li:eq(0) strong').text()) + 1;
+                      if(score < 10) score = '0' + score;
+                      $('.score li:eq(0) strong').text(score);
+                    }
+                    this.velocity.x = 0;
+                    this.velocity.y = 5; // Preserve velocity
+                    this.position.x = this.field.width / 2;
+                    this.position.y = this.field.height / 2;
+                    this.spin = 0;
+                }
+
+                if (this.position.y > this.field.height / 2) { // Bottom half of the playing field
+                        // Collision with bottom paddle
+                    if (bounds_top < (paddle1.position.y + paddle1.height) && bounds_bottom > paddle1.position.y 
+                    && bounds_left < (paddle1.position.x + paddle1.width) && bounds_right > paddle1.position.x) {
+                    
+                        var relative_x = (paddle1.position.x - this.position.x) / (paddle1.width / 2); // Normalized offset from -1 to 1
+
+                        var cone = 60;
+                        var angle = relative_x * (Math.PI / 180) * cone; 
+                        var speed = this.velocity.magnitude(); // Preserve the balls present velocity
+
+                        speed += speed * 0.05;
+
+                        var rotation = (Math.PI / 180) * ((180 - cone - 45) / 2);
+
+                        this.velocity.x = speed * -Math.cos(angle - rotation); // Calculate a new angle of reflection
+                        this.velocity.y = speed * Math.sin(angle - rotation);
+
+                        this.position.y = paddle1.position.y - this.radius; // Move the ball away from the paddle
+
+                        if(paddle1.velocity.x != 0) this.spin = -paddle1.velocity.x / 360;
+                    }
+                    
+                } else {
+                    // Collision with top paddle
+                    if (bounds_top < (paddle2.position.y + paddle2.height) && bounds_bottom > paddle2.position.y 
+                    && bounds_left < (paddle2.position.x + paddle2.width) && bounds_right > paddle2.position.x) {
+                    
+                        var relative_x = (paddle2.position.x - this.position.x) / (paddle2.width / 2); // Normalized offset from -1 to 1
+
+                        var cone = 60;
+                        var angle = relative_x * (Math.PI / 180) * cone; 
+                        var speed = this.velocity.magnitude(); // Preserve the balls present velocity
+
+                        speed += speed * 0.05;
+
+                        var rotation = (Math.PI / 180) * ((180 - cone - 45) / 2);
+
+                        this.velocity.x = speed * -Math.cos(angle - rotation); // Calculate a new angle of reflection
+                        this.velocity.y = speed * -Math.sin(angle - rotation);
+
+                        this.position.y = paddle2.position.y + paddle2.height + this.radius; // Move the ball away from the paddle
+
+                        if(paddle2.velocity.x != 0) this.spin = paddle2.velocity.x / 360;
+                    }
+
+                    this.spin *= 0.95;
+                    
+                }
+            };
+
+            var animate = window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || function (callback) {
+                    window.setTimeout(callback, 1000 / 60)
+            };
+
+            var myApp = function(){
+                self.requires = ['slider','dial'];
+                self.running = null;
+                self.interval = null;
+
+                self.stages = {'running':0, 'goal': 1};
+
+                self.current_stage = self.stages.running;
+
+
+
+                self.slider_value = 0;
+                self.slider_values = [];
+                self.dial_value = 0;
+                self.dial_values = [];
+
+
+                self.run = function(){
+
+                    if(self.running) return false;
+
+
+                    self.running = true;
+
+                    self.slider = rockpool.firstOfType('slider');
+                    self.dial = rockpool.firstOfType('dial');
+                    self.matrix = rockpool.firstOfType('matrix');
+
+                    self.motion = rockpool.firstOfType('motion');
+                    
+                    //self.interval = setInterval(self.mainLoop,50);
+                    animate(self.mainLoop);
+
+                    self.start_time = millis();
+
+                }
+
+                self.update_matrix = function(){
+                    var image = [0,0,0,0,0,0,0,0];
+                    /*var x, y;
+                    for(x = 0; x < 8; x++){
+                        image[x] = 0;
+                        for(y = 0; y < 8; y++){
+                            image[x] += maze[y][x] << (7-y);
+                            if(self.marble.x == x && self.marble.y == y){
+                                if(self.elapsed_ms < 2000){
+                                    image[x] += ((self.ms/200) % 2) << (7-y);
+                                }
+                                else
+                                {
+                                    image[x] += 1 << (7-y);
+                                }
+                            }
+                            if(self.goal.x == x && self.goal.y == y){
+                                image[x] += ((self.ms/500) % 2) << (7-y);
+                            }
+                        }
+                    }*/
+                    //console.log(self.matrix.outputs.display.data.image);
+                    self.matrix.outputs.display.data.brightness = 30;
+                    self.matrix.outputs.display.data.image = image;
+                    self.matrix.sync();
+                }
+
+                self.stop = function(){
+
+                    self.running = false;
+                    //clearInterval(self.interval);
+
+                }
+
+                self.mainLoop = function(){
+
+                    var t = millis();
+                    var ticks = Math.round(t/10);
+
+                    self.ms = t;
+                    self.elapsed_ms = self.ms - self.start_time;
+
+                    self.stage_run(t, ticks);
+
+                    if(self.running ) animate(self.mainLoop);
+
+                }
+
+                self.reset = function(){
+                    self.start_time = millis();
+                }
+
+
+                self.stage_run = function(ms, ticks){
+
+                    switch(self.current_stage){
+                        case self.stages.running:
+
+
+                            self.slider_value = (self.slider.inputs.position.data.position * 2) - 1;
+                            self.slider_values.push(self.slider_value);
+                            self.slider_values = self.slider_values.slice(-5);
+                            self.slider_value = self.slider_values.reduce(function(a,b){return a+b});
+                            self.slider_value /= self.slider_values.length;
+
+
+                            self.dial_value = (self.dial.inputs.position.data.position * 2) - 1;
+                            self.dial_values.push(self.dial_value);
+                            self.dial_values = self.dial_values.slice(-5);
+                            self.dial_value = self.dial_values.reduce(function(a,b){return a+b});
+                            self.dial_value /= self.dial_values.length;
+
+/*
+                            if(!self.motion){
+                                self.motion = rockpool.firstOfType('motion');
+                            }
+                            if(self.motion){
+                                var motion = self.motion.input_data;
+
+                            if(!isNaN(motion.x) && !isNaN(motion.y)){
+
+                                    motion.x -= 0.5;
+                                    motion.y -= 0.5;
+
+                                    console.log(motion);
+
+                                    if(motion.y > 0.2 || motion.y < -0.2) ball.tilt.x = motion.y * 2;
+                                    if(motion.x > 0.2 || motion.x < -0.2) ball.tilt.y = -motion.x * 2;
+
+                                    ball.tilt.x *= 0.9;
+                                    ball.tilt.y *= 0.9;
+
+                                }
+
+                            }
+*/
+                            player.update(ball, dial_value);
+                            computer.update(ball, slider_value);
+                            ball.update(player.paddle, computer.paddle);
+
+                            render();
+                            break;
+                        case self.stages.goal:
+                            self.current_stage = self.stages.running;
+                            break;
+                    }
+
+
+
+                }
+
+                return self;
+            }
+
+            rockpool.runCookbookApp(myApp());
+        </script>
+    </div>
+    </body>
+</html>

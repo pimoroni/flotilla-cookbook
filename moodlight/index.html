@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Rockpool - Cookbook</title>
+        <link rel="stylesheet" href="../css/jquery.fancybox.min.css">
+        <link rel="stylesheet" href="../css/pure-min.css">
+        <link rel="stylesheet" href="../css/rockpool.css">
+        <link rel="stylesheet" href="cookbook.css">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="viewport" content="width = device-width, user-scalable = no, initial-scale = 1.0">
+
+        <style type="text/css">
+            body {background:#000000;}
+            .mood-light, .mood-light div {
+                width:300px;
+                height:300px;
+                border-radius:50%;
+                margin:0 auto;
+            }
+            .mood-light div {
+                background: -moz-radial-gradient(100px 100px, ellipse cover,  rgba(255,255,255,0.7) 0%, rgba(255,255,255,0) 100%);
+                background: -webkit-radial-gradient(100px 100px, ellipse cover,  rgba(255,255,255,0.7) 0%,rgba(255,255,255,0) 100%); 
+                background: radial-gradient(ellipse at 100px 100px,  rgba(255,255,255,0.7) 0%,rgba(255,255,255,0) 100%);
+            }
+            .buttons, .buttons li {
+                list-style:none;
+                margin:0;
+                padding:0;
+                color:#CC0000;
+                text-align: center;
+            }
+            .buttons {
+                padding-top:20px;
+            }
+            .buttons li {
+                display:inline-block;
+                background:#FFFFFF;
+                width:80px;
+                height:50px;
+                border-radius:10px;
+                font-size:40px;
+                font-weight:bold;
+                line-height:50px;
+            }
+            .buttons li span {
+                display:block;
+                font-size:20px;
+                color:#FFF;
+                font-weight:normal;
+                line-height:30px;
+            }
+            .buttons li:nth-child(1){
+                border-bottom-left-radius:20px;
+            }
+            .buttons li:nth-child(4){
+                border-bottom-right-radius:20px;
+            }
+            .buttons li.active {
+                box-shadow:0px 0px 15px #FFF;
+            }
+            .buttons li.on {
+                color:#00CC00;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="main">
+            <div style="margin: 0px auto;width:100%;">
+                <div class="app">
+                    <header><h1>Mood Light</h1></header>
+
+                    <div class="mood-light">
+                            <div></div>
+                    </div>
+
+                    <ul class="buttons">
+                        <li>1<span>On/Off</span></li>
+                        <li>2<span>Auto</span></li>
+                        <li>3<span>--</span></li>
+                        <li>4<span>++</span></li>
+                    </ul>
+                </div>
+                <div class="modules icon-palette">
+                    <header><h1>Modules</h1></header>
+                </div>
+            </div>
+        </div>
+
+        <div style="display:none;" class="palettes"></div>
+
+        <script src="../js/lib/jquery-2.1.1.min.js"></script>
+        <script src="../js/lib/fastclick.js"></script>
+        <script src="../js/rockpool.js"></script>
+        <script src="../js/rockpool.languify.js"></script>
+        <script src="../js/socket.io.min.js"></script>
+        <script src="../js/rockpool.widget.js"></script>
+        <script src="../js/rockpool.rule.js"></script>
+        <script src="../js/rockpool.inputs.js"></script>
+        <script src="../js/rockpool.outputs.js"></script>
+        <script src="../js/rockpool.converters.js"></script>
+        <script src="../js/rockpool.palette.js"></script>
+        <script src="../js/rockpool.module.js"></script>
+        <script src="../js/rockpool.modules.js"></script>
+        <script src="../js/rockpool.client.js"></script>
+        <script src="../js/rockpool.save.js"></script>
+        <script src="../js/rockpool.find-hosts.worker.js"></script>
+        <script src="cookbook.js"></script>
+
+        <script src="../js/lib/jquery.fancybox.min.js"></script>
+
+        <script>
+            "use strict";
+
+            var myApp = function(){
+                self.requires = ['touch','rainbow'];
+                self.running = null;
+                self.interval = null;
+
+                self.r = 1;
+                self.g = 1;
+                self.b = 1;
+
+                self.moodlight = $('.mood-light');
+
+                self.touch = rockpool.firstOfType('touch');
+                self.rainbow = rockpool.firstOfType('rainbow');
+
+                self.light_on = false;
+                self.light_auto = false;
+
+                self.last_touch_one = false;
+                self.last_touch_two = false;
+
+                self.hue = 0;
+
+                self.run = function(){
+
+                    if(self.running) return false;
+                    self.running = true;
+
+                    self.touch = rockpool.firstOfType('touch');
+                    self.rainbow = rockpool.firstOfType('rainbow');
+
+                    self.interval = setInterval(self.mainLoop,100);
+
+                }
+
+                self.stop = function(){
+
+                    self.running = false;
+                    clearInterval(self.interval);
+
+                }
+
+                self.HSVtoRGB = function(h, s, v) {
+                    var r, g, b, i, f, p, q, t;
+                    if (arguments.length === 1) {
+                        s = h.s, v = h.v, h = h.h;
+                    }
+                    i = Math.floor(h * 6);
+                    f = h * 6 - i;
+                    p = v * (1 - s);
+                    q = v * (1 - f * s);
+                    t = v * (1 - (1 - f) * s);
+                    switch (i % 6) {
+                        case 0: r = v, g = t, b = p; break;
+                        case 1: r = q, g = v, b = p; break;
+                        case 2: r = p, g = v, b = t; break;
+                        case 3: r = p, g = q, b = v; break;
+                        case 4: r = t, g = p, b = v; break;
+                        case 5: r = v, g = p, b = q; break;
+                    }
+                    return {
+                        r: r,
+                        g: g,
+                        b: b
+                    };
+                }
+
+                self.mainLoop = function(){
+
+                    var touch_one   = touch.inputs.button.data[1] > 0;
+                    var touch_two   = touch.inputs.button.data[2] > 0;
+                    var touch_three = touch.inputs.button.data[3] > 0;
+                    var touch_four  = touch.inputs.button.data[4] > 0;
+
+                    $('.buttons li:eq(0)').toggleClass('active', touch_one);
+                    $('.buttons li:eq(1)').toggleClass('active', touch_two);
+                    $('.buttons li:eq(2)').toggleClass('active', touch_three);
+                    $('.buttons li:eq(3)').toggleClass('active', touch_four);
+
+                    if( touch_one && last_touch_one != touch_one ){
+                        light_on = !light_on;
+
+                        $('.buttons li:eq(0)').toggleClass('on', light_on);
+                    }
+                    last_touch_one = touch_one;
+
+                    if( touch_two && last_touch_two != touch_two ){
+                        light_auto = !light_auto;
+
+                        $('.buttons li:eq(1)').toggleClass('on', light_auto);
+                    }
+                    last_touch_two = touch_two;
+
+                    if(light_auto && light_on){
+                        hue++;
+                        hue%=360;
+                    }
+
+                    if( touch_four ){
+                        light_auto = false;
+                        $('.buttons li:eq(1)').removeClass('on');
+                        hue++;
+                        hue%=360;
+                    }
+                    if( touch_three ){
+                        light_auto = false;
+                        $('.buttons li:eq(1)').removeClass('on');
+                        hue--;
+                        if( hue < 0 ){
+                            hue = 360 - hue;
+                        }
+                    }
+
+                    var rgb = HSVtoRGB(hue/360.0, 1.0, 1.0);
+
+                    r = rgb.r;
+                    g = rgb.g;
+                    b = rgb.b;
+
+                    var html_rgb = 'rgb(' + [Math.round(r*255.0),Math.round(g*255.0),Math.round(b*255.0)].join(',') + ')';
+                    var css_box_shadow = 'none';
+
+                    if( light_on ){
+                        css_box_shadow = '0px 0px 100px ' + html_rgb;
+                        rainbow.outputs.LED.data.r = r;
+                        rainbow.outputs.LED.data.g = g;
+                        rainbow.outputs.LED.data.b = b;
+                    }
+                    else
+                    {
+                        rainbow.outputs.LED.data.r = 0;
+                        rainbow.outputs.LED.data.g = 0;
+                        rainbow.outputs.LED.data.b = 0;
+                    }
+
+                    rainbow.sync();
+
+                    moodlight.css({
+                        backgroundColor: html_rgb,
+                        boxShadow: css_box_shadow
+                    });
+
+                }
+
+                return self;
+
+            }
+
+            rockpool.runCookbookApp(myApp());
+        </script>
+    </body>
+</html>

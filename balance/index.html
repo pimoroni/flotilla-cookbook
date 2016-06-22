@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Rockpool - Cookbook</title>
+        <link rel="stylesheet" href="http://flotil.la/shipshape/css/jquery.fancybox.min.css">
+        <link rel="stylesheet" href="http://flotil.la/shipshape/css/pure-min.css">
+        <link rel="stylesheet" href="http://flotil.la/shipshape/css/rockpool.css">
+        <link rel="stylesheet" href="../cookbook.css">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="viewport" content="width = device-width, user-scalable = no, initial-scale = 1.0">
+
+        <style type="text/css">
+
+            .stage {
+                position:relative;
+                width:800px;
+                height:400px;
+            }
+            .countdown {
+                position:absolute;
+                width:800px;
+                height:400px;
+                left:0;
+                top:0;
+                font-size:100px;
+                text-align:center;
+                line-height:400px;
+                color:#333;
+                background:rgba(255,255,255,0.8);
+            }
+
+            .balance {
+                position:absolute;
+                left:380px;
+                bottom:0px;
+                width:40px;
+                height:300px;
+                -webkit-transform-origin:20px 300px;
+                -webkit-transform:rotate(0deg);
+                background:#000;
+            }
+
+            .wind {
+                position: absolute;
+                -webkit-transition:all 0.2s;
+                height:20px;
+            }
+
+            .wind.right {
+                left:400px;
+                top:0px;
+                width:10px;
+                background:#CC0000;
+                border-left:1px solid #220000;
+            }
+            .wind.left {
+                right:400px;
+                top:0px;
+                width:10px;
+                background:#CC0000;
+                border-right:1px solid #220000;
+            }
+            .score {
+                position:absolute;
+                right:0;
+                bottom:0;
+            }
+
+        </style>
+    </head>
+    <body>
+        <div class="main">
+            <div class="stage">
+                <div class="wind left"></div>
+                <div class="wind right"></div>
+                <div class="balance"></div>
+                <div class="score"></div>
+                <div class="countdown"></div>
+            </div>
+        </div>
+
+        <div style="display:none;" class="palettes"></div>
+
+        <script src="http://flotil.la/shipshape/js/lib/jquery-2.1.1.min.js"></script>
+        <script src="http://flotil.la/shipshape/js/lib/fastclick.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.languify.js"></script>
+        <script src="http://flotil.la/shipshape/js/socket.io.min.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.widget.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.rule.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.inputs.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.outputs.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.converters.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.palette.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.module.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.modules.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.client.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.save.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.find-hosts.worker.js"></script>
+        <script src="cookbook.js"></script>
+
+        <script src="http://flotil.la/shipshape/js/lib/jquery.fancybox.min.js"></script>
+
+        <script type="text/javascript">
+
+            "use strict";
+
+            var myApp = function(){
+                self.requires = ['slider'];
+                self.running = null;
+                self.interval = null;
+
+                self.rotation  = 0;
+                self.balance_x = 0;
+                self.wind_x    = 0;
+                self.jitter_x  = 0;
+                self.score     = 0;
+
+                self.score_angle = 20; // 15 is really hard!
+
+                self.slider = null;
+
+                self.step = 'start';
+
+                self.dom_stage = $('.stage');
+                self.dom_wind_left = self.dom_stage.find('.wind.left');
+                self.dom_wind_right = self.dom_stage.find('.wind.right');
+                self.dom_score = self.dom_stage.find('.score');
+                self.dom_balance = self.dom_stage.find('.balance');
+                self.dom_countdown = self.dom_stage.find('.countdown');
+
+                self.run = function(){
+
+                    if(self.running) return false;
+                    self.running = true;
+
+                    self.slider = rockpool.firstOfType('slider');
+                    
+                    self.interval = setInterval(self.mainLoop,50);
+
+                }
+
+                self.stop = function(){
+
+                    self.running = false;
+                    clearInterval(self.interval);
+
+                }
+
+                self.mainLoop = function(){
+
+                    var t = millis();
+                    var ticks = Math.round(t/10);
+
+                    switch(self.step){
+                        case 'score': self.stage_score(t,ticks); return;
+                        case 'start': self.stage_start(t,ticks); return;
+                        case 'run': self.stage_run(t,ticks); return;
+                    }
+                }
+
+                self._is_running = false;
+                self._start_time = 0;
+
+                self.stage_score = function(ms, ticks){
+                    if(!self._is_running){
+                        self._start_time = ms;
+                        self._is_running = true;
+                    }
+
+                    var d = Math.round((ms - self._start_time) / 1000);
+                    console.log('Score show',d);
+
+                    self.dom_countdown.show().html('Score: ' + self.last_score);
+
+                    if(d > 3){
+                        self.dom_countdown.hide();
+                        self.step = 'start';
+                        self._is_running = false;
+                    }
+                }
+
+                self.restart = function(){
+                    self.last_score = self.score;
+                    self.rotation  = 0;
+                    self.balance_x = 0;
+                    self.wind_x    = 0;
+                    self.jitter_x  = 0;
+                    self.score     = 0;
+                    self._is_running = false;
+                    self.step = 'score';
+                }
+
+                self.stage_start = function(ms, ticks){
+                    if(!self._is_running){
+                        self._start_time = ms;
+                        self._is_running = true;
+                    }
+                    var d = Math.round((ms - self._start_time) / 1000);
+                    console.log('Countdown',d);
+                    switch(d){
+                        case 0:
+                            self.dom_countdown.show().text('Ready');
+                            return;
+                        case 1:
+                            self.dom_countdown.show().text('Set');
+                            return;
+                        case 2:
+                            self.dom_countdown.show().text('Go!');
+                            return;
+                        default:
+                            self.dom_countdown.hide();
+                            self.step = 'run';
+                            return;
+                    }
+                }
+
+                self.stage_run = function(ms, ticks){
+
+                    var slider = self.slider.inputs.position.data.position;
+
+                    self.balance_x = (slider - 0.5) * 2; // Convert 0 - 1 position into -0.5 - 0.5 delta,
+                                                         // Convert -0.5 - 0.5 to -1 to 1 delta
+
+                    if( ticks % random(5,15) == 0 ){
+                        self.jitter_x = randomf(-0.01,0.01); // Tiny natural imbalance
+                        //console.log('Jitter',self.jitter_x);
+                    }
+                    if( ticks % random(100,300) == 0 ){
+                        self.wind_x = randomf(-0.5,0.5); // Big nasty wind forces!
+                        //console.log('Wind',self.wind_x);
+                    }
+                    
+                    if( self.wind_x < 0 ){
+                        self.dom_wind_left.css({width:Math.abs(self.wind_x)*400});
+                        self.dom_wind_right.css({width:0});
+                    }
+                    else if( wind_x > 0 ){
+                        self.dom_wind_right.css({width:Math.abs(self.wind_x)*400});
+                        self.dom_wind_left.css({width:0});
+                    }
+                    else
+                    {
+                        self.dom_wind_left.css({width:0});
+                        self.dom_wind_right.css({width:0});
+                    }
+
+                    self.rotation += wind_x + jitter_x + balance_x + (rotation * 0.02);
+
+                    if( self.rotation < -90 ){ self.rotation = -90 };
+                    if( self.rotation > 90 ){ self.rotation = 90 };
+
+                    if( self.rotation < -80 || self.rotation > 80 ){
+                        self.rotation = 0;
+                        self.restart();
+                    }
+
+                    var score_scale = self.score_angle - Math.abs(self.rotation);
+
+                    self.score+=Math.floor(score_scale*0.1);
+
+                    self.dom_score.text(self.score);
+
+                    self.dom_balance.css({transform:"rotate(" + rotation + "deg)"});
+
+                }
+
+                return self;
+            }
+
+            rockpool.runCookbookApp(myApp());
+        </script>
+        <!--
+        <script type="text/javascript">
+
+            window.requestAnimFrame = (function(){
+              return  window.requestAnimationFrame       ||
+                      window.webkitRequestAnimationFrame ||
+                      window.mozRequestAnimationFrame    ||
+                      function( callback ){
+                        window.setTimeout(callback, 1000 / 60);
+                      };
+            })();
+
+            (function animloop(){
+              requestAnimFrame(animloop);
+              render();
+            })();
+
+            var rotation  = 0;
+            var balance_x = 0;
+            var wind_x    = 0;
+            var jitter_x  = 0;
+            var ticks     = 0;
+            var score     = 0;
+
+            var score_angle = 30; // 15 is really hard!
+
+            var events = events || {};
+            events['joystick'] = function(my_slider){
+
+                //console.log(my_slider.position);
+                console.log(my_slider);
+
+                var balance = my_slider.y - 0.5; // Convert 0 - 1 position into -0.5 - 0.5 delta
+                balance *= 2;                           // Convert -0.5 - 0.5 to -1 to 1 delta
+
+                balance_x = balance; 
+
+            }
+
+            function render(){
+                if( ticks % 20 == 0 ){
+                    jitter_x = randomf(-0.01,0.01); // Tiny natural imbalance
+                }
+                if( ticks % 120 == 0 ){
+                    wind_x = randomf(-0.5,0.5); // Big nasty wind forces!
+                    console.log('Wind',wind_x);
+                    if( wind_x < 0 ){
+                        $('.wind.left').css({
+                            width:Math.abs(wind_x)*400
+                        });
+                        $('.wind.right').css({
+                            width:0
+                        })
+                    }
+                    else if( wind_x > 0 ){
+                        $('.wind.right').css({
+                            width:Math.abs(wind_x)*400
+                        });
+                        $('.wind.left').css({
+                            width:0
+                        })
+                    }
+                    else
+                    {
+                        $('.wind.left').css({
+                            width:0
+                        })
+
+                        $('.wind.right').css({
+                            width:0
+                        })
+                    }
+                }
+
+                rotation += wind_x + jitter_x + balance_x + (rotation * 0.02);
+
+                if( rotation < -90 ){ rotation = -90 };
+                if( rotation > 90 ){ rotation = 90 };
+
+
+                var score_scale = score_angle - Math.abs(rotation);
+
+                score+=Math.floor(score_scale*0.1);
+
+                /*
+                if( rotation > -15 && rotation < 15 ){
+                    score++;
+                }
+                else
+                {
+                    score--;
+                }*/
+
+                $('.score').text(score);
+
+                $('.balance').css({
+                    transform:"rotate(" + rotation + "deg)"
+                })
+                ticks++;
+            }
+
+        </script>
+        -->
+
+    </div>
+    </body>
+</html>

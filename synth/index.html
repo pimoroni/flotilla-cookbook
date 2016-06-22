@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Rockpool - Cookbook</title>
+        <link rel="stylesheet" href="http://flotil.la/shipshape/css/jquery.fancybox.min.css">
+        <link rel="stylesheet" href="http://flotil.la/shipshape/css/pure-min.css">
+        <link rel="stylesheet" href="http://flotil.la/shipshape/css/rockpool.css">
+        <link rel="stylesheet" href="../cookbook.css">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="viewport" content="width = device-width, user-scalable = no, initial-scale = 1.0">
+
+        <style type="text/css">
+            body {background:#000000;}
+            
+            .buttons, .buttons li {
+                list-style:none;
+                margin:0;
+                padding:0;
+                color:#CC0000;
+                text-align: center;
+            }
+            .buttons {
+                padding-top:20px;
+            }
+            .buttons li {
+                display:inline-block;
+                background:#FFFFFF;
+                width:80px;
+                height:50px;
+                border-radius:10px;
+                font-size:40px;
+                font-weight:bold;
+                line-height:50px;
+            }
+            .buttons li span {
+                display:block;
+                font-size:20px;
+                color:#FFF;
+                font-weight:normal;
+                line-height:30px;
+            }
+            .buttons li:nth-child(1){
+                border-bottom-left-radius:20px;
+            }
+            .buttons li:nth-child(4){
+                border-bottom-right-radius:20px;
+            }
+            .buttons li.active {
+                box-shadow:0px 0px 15px #FFF;
+            }
+            .buttons li.on {
+                color:#00CC00;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="main">
+            <div style="margin: 0px auto;width:100%;">
+                <div class="app">
+                    <header><h1>Synth</h1></header>
+                    <ul>
+                        <li>Dial: <input type="text" class="watch-dial" />
+                        <li>Slider: <input type="text" class="watch-slider" />
+                        <li>Light: <input type="text" class="watch-light" />
+                        <li>Touch One: <input type="text" class="watch-touch-one" />
+                        <li>Touch Two: <input type="text" class="watch-touch-two" />
+                        <li>Touch Three: <input type="text" class="watch-touch-three" />
+                        <li>Touch Four: <input type="text" class="watch-touch-four" />
+                    </ul>
+                    <ul class="buttons">
+                        <li class="on">1<span>Tri</span></li>
+                        <li>2<span>Saw</span></li>
+                        <li>3<span>Sin</span></li>
+                        <li>4<span>&nbsp;</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div style="display:none;" class="palettes"></div>
+
+        <script src="http://flotil.la/shipshape/js/lib/jquery-2.1.1.min.js"></script>
+        <script src="http://flotil.la/shipshape/js/lib/fastclick.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.languify.js"></script>
+        <script src="http://flotil.la/shipshape/js/socket.io.min.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.widget.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.rule.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.inputs.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.outputs.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.converters.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.palette.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.module.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.modules.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.client.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.save.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.find-hosts.worker.js"></script>
+
+        <script src="lib/seedrandom.min.js"></script>
+        <script src="lib/teoria.js"></script>
+        <script src="lib/timbre.min.js"></script>
+        <script src="cookbook.js"></script>
+
+        <script src="http://flotil.la/shipshape/js/lib/jquery.fancybox.min.js"></script>
+
+        <script>
+            "use strict";
+
+            var drum, BD, SD, HH1, HH2, CYM;
+
+            Math.randomNth = function(seed, n){
+                Math.seedrandom(seed);
+                while(n--){Math.random()}
+                return Math.random();
+            }
+            var myApp = function(){
+                self.requires = ['slider','dial','light','touch','rainbow'];
+                self.running = null;
+                self.interval = null;
+
+                self.slider = null;
+                self.dial = null;
+                self.rainbow = null;
+                self.touch = null;
+                self.light = null;
+
+                self.history_length = 6;
+                self.note_history = [];
+
+                self.random = function(min, max){
+                    return Math.floor(Math.random() * (max-min)) + min;
+                }
+
+                self.addToHistory = function(note){
+                    self.note_history.unshift(note);
+                    self.note_history = self.note_history.slice(0,history_length);
+                }
+
+                self.millis = function(){
+                    return (new Date()).getTime();
+                }
+
+                self.get_freq = function(key){
+                    return teoria.note.fromKey(key).fq();
+                }
+                self.lastLight = 0;
+                self.minLight = 65535;
+                self.maxLight = 0;
+                self.scaleLight = function(light){
+                    //console.log("light", light);
+                    light =  Math.round(light / 20);
+                    if(light != self.lastlight ){
+                        self.lastlight = light;
+                        return light;
+                    }
+                    return 0;
+                    //self.minLight += (self.maxLight*0.01);
+                    //self.maxLight -= (self.maxLight*0.01);
+                    /*if( light < self.minLight ){self.minLight = light;}
+                    if( light > self.maxLight ){self.maxLight = light;}
+                    light = light-self.minLight;
+                    var range = self.maxLight-self.minLight;
+
+                    //console.log("Light", light/range, light, self.minLight, self.maxLight);
+                    if(range > 0){
+                        var ret = light/range;
+                        if( ret != self.lastlight ){
+                            self.lastlight = ret;
+                            return light/range;
+                        }
+                        else
+                        {
+                            return 0;
+                        }
+                    }
+                    else
+                    {
+                        return 0;
+                    }*/
+                }
+                self.run = function(){
+
+                    if(self.running) return false;
+                    self.running = true;
+
+                    self.slider = rockpool.firstOfType('slider');
+                    self.light = rockpool.firstOfType('light');
+                    self.rainbow = rockpool.firstOfType('rainbow');
+                    self.dial = rockpool.firstOfType('dial');
+                    self.touch = rockpool.firstOfType('touch');
+                    
+                    self.interval = setInterval(self.mainLoop,Math.round(1000/(self.bpm/60)/10));
+
+                }   
+                self.closest = function(arr, target) {
+                    if (!(arr) || arr.length == 0) return null;
+                    if (arr.length == 1) return i[0];
+
+                    for (var i=1; i<arr.length; i++) {
+                        // As soon as a number bigger than target is found, return the previous or current
+                        // number depending on which has smaller difference to the target.
+                        if (arr[i] > target) {
+                            var p = arr[i-1];
+                            var c = arr[i]
+                            return Math.abs( p-target ) < Math.abs( c-target ) ? p : c;
+                        }
+                    }
+                    // No number in array is bigger so return the last.
+                    return arr[arr.length-1];
+                }
+                self.stop = function(){
+
+                    self.running = false;
+                    if(self.sin){
+                        self.sin.stop();
+                    }
+                    clearInterval(self.interval);
+
+                }
+                self.snapToScale = function(note){
+                    var w = Math.floor(note);
+                    var f = note - w;
+                    var r = w % 12;
+                    note = Math.floor(w/12) * 12;
+                    return note + f + self.closest([0, 2, 4, 7, 9], r);                   
+                }
+                self.calculateNote = function(step, dial, slider, light){
+                    var key = 26;
+                    var num_steps = self.num_steps;
+                    key += Math.round(12*Math.randomNth(dial, step % num_steps));
+                    key += self.snapToScale(key);
+
+                    key = self.snapToScale(key);
+                    return key;
+                }
+                self.num_steps = 16;
+                self.bpm = 180;
+                self.master_step = 0;
+                self.step = 0; // = self.master_step / 10
+                self.drumLoop = function(step, dial, slider, light, rainbowBuf){
+                    var num_steps = self.num_steps;
+
+                    var s = step % num_steps; self.num_steps;
+                
+                    var rand = Math.round(Math.randomNth(slider, step % self.num_steps)*10);
+                    var phrase = Math.round(Math.randomNth(slider, step % (self.num_steps / 4))*3)  
+
+                    //console.log("Drum Step: ", s, rand, phrase);
+                    if(s == 0 && rand % 2){
+                        CYM.bang();
+                    }
+                    
+                    if(phrase==1){
+                        if(s % 4 == 0){
+                            BD.bang();
+
+                            rainbowBuf[ 4 + ((step % num_steps % 4)*3) ] = 128; 
+                        }
+                        if(s % 4 == 1){
+                            HH2.bang();
+                        }
+                        if(s % 4 == 2){
+                            SD.bang();
+
+                            rainbowBuf[ 5 + ((step % num_steps % 4)*3) ] = 128; 
+                        }
+                        if(s % 4 == 3){
+                            HH1.bang();
+                        }
+                    }
+                    else if(phrase==2){
+                        
+                        if(s % 4 == 1){
+                            HH2.bang();
+                        }
+                    }
+                    else
+                    {
+
+                        // Double BD drum phrase
+                        if( s % 8 == 0 | s % 8 == 1 | s % 8 == 4){
+                            BD.bang();
+
+                            rainbowBuf[ 4 + ((step % num_steps % 4)*3) ] = 128; 
+                        }
+                        if(s % 4 == 2){
+                            SD.bang();
+
+                            rainbowBuf[ 5 + ((step % num_steps % 4)*3) ] = 128; 
+                        }
+                        if(s % 2 == 1){
+                            HH2.bang();
+                        }
+                        if(s % 4 == 3){
+                            HH1.bang();
+                        }
+                    }
+
+                    return rainbowBuf;
+
+                }
+                self.mainLoop = function(){
+                    //var t = self.millis();
+
+                    self.master_step++;
+    
+                    var touch_one = touch.inputs.button.data[1] > 0;
+                    var touch_two = touch.inputs.button.data[2] > 0;
+                    var touch_three = touch.inputs.button.data[3] > 0;
+                    var touch_four = touch.inputs.button.data[4] > 0;
+
+                    $('.buttons li:eq(0)').toggleClass('active', touch_one);
+                    $('.buttons li:eq(1)').toggleClass('active', touch_two);
+                    $('.buttons li:eq(2)').toggleClass('active', touch_three);
+                    $('.buttons li:eq(3)').toggleClass('active', touch_four);
+
+                    if(touch_one){
+                        self.synth.set({wave:"tri",mul:0.6});
+                        self.base.set({wave:"tri",mul:0.6});
+
+                        $('.buttons li').removeClass('on').filter(':eq(0)').addClass('on');
+                    }
+                    if(touch_two){
+                        self.synth.set({wave:"saw",mul:0.3});
+                        self.base.set({wave:"sin",mul:0.3});
+
+                        $('.buttons li').removeClass('on').filter(':eq(1)').addClass('on');
+                    }
+                    if(touch_three){
+                        self.synth.set({wave:"sin",mul:0.6});
+                        self.base.set({wave:"sin",mul:0.6});
+
+                        $('.buttons li').removeClass('on').filter(':eq(2)').addClass('on');
+                    }
+                    if(touch_four){
+                        self.synth.set({wave:"noise",mul:0.6});
+                        $('.buttons li').removeClass('on').filter(':eq(3)').addClass('on');
+                    }
+
+                    var light = self.scaleLight(self.light.inputs.visible.data.vis); 
+
+                    if(light > 0){
+                    self.d_beam.noteOn(self.snapToScale(90 - (light%60)), 100);
+                    }   
+
+                    /*if( light > 0 ){
+                
+                        //self.sin.set({
+                         //       freq: self.get_freq(self.snapToScale(40 - Math.round(light*24))),
+                          //      mul: 0.5
+                           // });
+                        self.sin.set({
+                                freq: self.get_freq(self.snapToScale(70 - (light%60))),
+                                mul: 0.2
+                            });
+                        
+                        self.sin.play();
+                    }
+                    else
+                    {
+                        self.sin.pause();
+                    }*/
+
+                    //self.gate.selected = (Math.round(self.master_step/3) % 2);
+                    if(self.master_step % 10 == 0){
+                        
+                        var slider = self.slider.inputs.position.data.position;
+                        var dial = self.dial.inputs.position.data.position;
+
+                        
+                        self.step = Math.floor(self.master_step / 10);
+                        //var step = self.step;
+                        //var step = Math.floor(t/(1000/(self.bpm/60))) //% self.num_steps; 
+                        //var freq = Math.round(self.get_freq(1 + Math.round(self.dial.inputs.position.data.value * 6)));
+     
+                    
+                        var rainbowBuf = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+
+                        rainbowBuf[1] = 64 * ((self.step % 16) < 8);
+                        rainbowBuf[2] = 64 * ((self.step % 16) < 16 && (self.step % 16) >= 8);
+
+                        rainbowBuf[ 3 + ((self.step % self.num_steps % 4)*3) ] = 128;        
+
+                       //var freq = self.get_freq(Math.round((self.millis()/200) % self.scale.length-1));
+                        var note = self.calculateNote(step, dial, slider, light);
+
+                        //console.log("Note:", note);
+                        self.addToHistory(note);
+
+                        rainbowBuf = self.drumLoop(self.step, dial, slider, light, rainbowBuf);
+                          //  console.log('Frequency: ' + freq);
+
+                        //var mul = 1.0 - slider;
+                        //var mul = 0.8;
+
+                        $('.watch-slider').val(slider);
+                        $('.watch-dial').val(dial);
+                        $('.watch-light').val(light);
+                        $('.watch-touch-one').val(touch_one);
+                        $('.watch-touch-two').val(touch_two);
+                        $('.watch-touch-three').val(touch_three);
+                        $('.watch-touch-four').val(touch_four);
+                        
+                        if(self.lastNote != note){
+                            self.lastNote = note;
+                            self.synth.noteOn(note, 100);
+                        }
+                        else
+                        {
+                            self.lastNote = 0;
+                        }
+                        if(slider > 0 && self.note_history.length == self.history_length){
+                            //self.base.set({freq:teoria.note.fromKey(self.snapToScale(10+Math.round(((Math.round(self.step/4))%8) + (slider*10)))).fq()});
+
+                            var base_note = 0;
+                            for(var x = 0; x < self.history_length; x++){
+                                base_note += self.note_history[x];
+                            }
+                            base_note = Math.round(base_note / self.history_length);
+                            base_note = self.snapToScale(base_note - 12 - 12);
+                            
+
+                            self.base.noteOn(base_note, 100);
+                            //self.base.set({freq:teoria.note.fromKey(self.snapToScale(base_note)).fq()});
+
+                            //self.base.play();
+                            //self.gate_1.play();
+                            //self.gate_2.play();
+                        }
+                        else
+                        {
+                            //self.base.pause();
+                            //self.gate_1.pause();
+                            //self.gate_2.pause();
+                        }
+                        //rockpool.debug_enabled = true;
+                        //console.log(window.app.rainbow.host, window.app.rainbow.channel+1, window.app.rainbow.code, rainbowBuf);
+                        // Internally channels are zero indexed, but the dock counts from 1
+                        rockpool.sendHostUpdate(window.app.rainbow.host, window.app.rainbow.channel + 1, window.app.rainbow.code,rainbowBuf);   
+                    }
+                }
+                self.lastNote = 0;
+                self.base_env  = T("adsr", {a:5,d:300,s:0,r:1600});
+                self.base = T("OscGen", {wave: "tri", mul:0.5, env:self.base_env}).play();
+                //self.gate = T("gate", self.base);
+                //self.gate_1 = T("dist" , {pre:32, post:-20, mul:0.3}, self.gate.at(0));
+                //self.gate_2 = T("dist" , {pre:10, post:-10, mul:0.3}, self.gate.at(1));
+
+                self.sin = T("tri");//.play();
+                self.env  = T("adsr", {a:10,d:300,s:0,r:1000});
+                self.synth = T("OscGen", {wave:"tri", mul:0.6, env:self.env}); //.play();
+                self.reverb = T("reverb", {room:0.9, damp:0.2, mix:0.45}, self.synth).play();
+
+                self.d_beam = T("OscGen", {wave:"tri", mul:0.6, env:self.env});
+                self.d_reverb = T("reverb", {room:0.9, damp:0.2, mix:0.45}, self.d_beam).play();
+                return self;
+                
+            }
+            T("audio").load("drumkit.wav", function(){
+                BD  = this.slice(   0,  500).set({bang:false});
+                SD  = this.slice( 500, 1000).set({bang:false});
+                HH1 = this.slice(1000, 1500).set({bang:false, mul:0.2});
+                HH2 = this.slice(1500, 2000).set({bang:false, mul:0.2});
+                CYM = this.slice(2000).set({bang:false, mul:0.2});
+                //drum = T("lowshelf", {freq:110, gain:8, mul:0.4}, BD, SD, HH1, HH2, CYM).play();
+                drum = T("dist" , {pre:32, post:-20, mul:0.3}, BD, SD, HH1, HH2, CYM).play();
+                window.app = myApp();
+                rockpool.runCookbookApp(window.app);
+            });
+        </script>
+    </body>
+</html>

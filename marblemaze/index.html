@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Rockpool - Cookbook</title>
+        <link rel="stylesheet" href="http://flotil.la/shipshape/css/jquery.fancybox.min.css">
+        <link rel="stylesheet" href="http://flotil.la/shipshape/css/pure-min.css">
+        <link rel="stylesheet" href="http://flotil.la/shipshape/css/rockpool.css">
+        <link rel="stylesheet" href="../cookbook.css">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="viewport" content="width = device-width, user-scalable = no, initial-scale = 1.0">
+
+        <style type="text/css">
+
+            .stage {
+                position:relative;
+                width:400px;
+                height:400px;
+            }
+
+            .maze {
+                width:400px;
+                height:400px;
+            }
+
+            .maze .cell, .maze .player, .maze .goal {
+                position: absolute;
+                display: block;
+                border-radius:10%;
+            }
+
+            .maze .player {
+                background: #CC0000;
+            }
+
+            .maze .goal {
+                background: #00CC00;
+            }
+
+            .maze .player, .maze .goal {
+                border-radius:50%;
+            }
+
+        </style>
+    </head>
+    <body>
+        <div class="main">
+            <div class="stage">
+                <div class="maze"></div>
+            </div>
+        </div>
+
+        <div style="display:none;" class="palettes"></div>
+
+        <script src="http://flotil.la/shipshape/js/lib/jquery-2.1.1.min.js"></script>
+        <script src="http://flotil.la/shipshape/js/lib/fastclick.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.languify.js"></script>
+        <script src="http://flotil.la/shipshape/js/socket.io.min.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.widget.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.rule.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.inputs.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.outputs.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.converters.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.palette.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.module.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.modules.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.client.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.save.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.find-hosts.worker.js"></script>
+        <script src="../cookbook.js"></script>
+
+        <script src="http://flotil.la/shipshape/js/lib/jquery.fancybox.min.js"></script>
+
+        <script type="text/javascript">
+
+            "use strict";
+
+            var myApp = function(){
+                self.requires = ['motion','matrix'];
+                self.running = null;
+                self.interval = null;
+
+                self.stages = {'running':0, 'goal': 1};
+
+                self.score     = 0;
+
+                self.motion = null;
+
+                self.levels = [
+                           [[0,0,0,1,0,1,0,1],
+                            [1,1,0,1,0,0,0,0],
+                            [0,0,0,1,0,1,1,0],
+                            [0,1,1,1,0,1,0,0],
+                            [0,0,0,0,0,1,0,1],
+                            [1,1,1,1,1,1,0,1],
+                            [0,0,0,1,0,0,0,0],
+                            [0,1,0,0,0,0,1,1],
+                            [0,7,0,0]],
+                           [[0,1,0,0,0,0,0,0],
+                            [0,1,0,1,1,1,1,0],
+                            [0,0,0,0,0,1,1,1],
+                            [1,1,1,1,0,0,0,0],
+                            [0,0,0,1,0,1,1,1],
+                            [0,1,0,0,0,0,0,1],
+                            [0,1,0,1,1,1,0,1],
+                            [0,1,0,0,0,0,0,1],
+                            [0,7,7,0]],
+                           [[0,0,0,0,0,0,1,0],
+                            [0,1,1,1,1,0,1,0],
+                            [0,1,0,0,0,0,1,0],
+                            [0,1,0,1,1,1,1,0],
+                            [0,1,0,1,0,0,1,0],
+                            [0,1,0,1,0,0,1,0],
+                            [0,1,0,1,0,1,1,0],
+                            [0,1,0,0,0,0,0,0],
+                            [0,7,7,0]],
+                           [[0,0,0,0,0,0,0,0],
+                            [0,0,1,0,0,1,0,0],
+                            [0,0,0,0,0,0,0,0],
+                            [0,0,0,0,0,0,0,0],
+                            [0,0,1,0,0,1,0,0],
+                            [0,0,0,0,0,0,0,0],
+                            [1,1,0,1,1,0,1,1],
+                            [0,0,0,0,0,0,0,0],
+                            [0,7,3,4]]];
+
+                self.level = 0;
+                self.maze = self.levels[0];
+
+
+                self.marble = {x:self.maze[8][0], y:self.maze[8][1]};
+                self.goal = {x:self.maze[8][2], y:self.maze[8][3]};
+
+                self.cell_w = 0;
+                self.cell_h = 0;
+
+                self.last_matrix_update = 0;
+                self.last_marble_move = 0;
+
+                self.current_stage = self.stages.running;
+
+                self.stage_time = 0;
+                self.entered_stage = 0;
+
+                self.ms = 0;
+                self.elapsed_ms = 0;
+                self.start_time = 0;
+
+                self.run = function(){
+
+                    if(self.running) return false;
+
+                    self.setup_maze();
+
+                    self.running = true;
+
+                    self.motion = rockpool.firstOfType('motion');
+                    self.matrix = rockpool.firstOfType('matrix');
+                    
+                    self.interval = setInterval(self.mainLoop,50);
+
+
+                    self.start_time = millis();
+
+                }
+
+                self.setup_maze = function(){
+                    var x, y;
+
+                    self.cell_w = parseInt($('.maze').width()) / 8;
+                    self.cell_h = parseInt($('.maze').height()) / 8;
+
+                    if($('.maze .cell').length == 0){
+                        for(x = 0; x < 8; x++){
+                            for(y = 0; y < 8; y++){
+                                $('<div>')
+                                .css({
+                                    width: self.cell_w,
+                                    height: self.cell_h,
+                                    left: x*self.cell_w,
+                                    top: y*self.cell_h
+                                })
+                                .addClass('cell')
+                                .appendTo('.maze');
+                            }
+                        }
+                    }
+
+                    for(x = 0; x < 8; x++){
+                        for(y = 0; y < 8; y++){
+
+                            var cell = $('.maze .cell').filter(':eq(' + ((x*8) + y) + ')');
+                            if(self.maze[y][x] == 1){
+                                cell.css({
+                                    'background-color': '#000000'
+                                }).data('wall',1);
+                            }
+                            else
+                            {
+                                cell.css({
+                                    'background-color': 'transparent'
+                                }).data('wall',0);
+                            }
+
+                        }
+                    }
+
+                    if($('.maze .player').length == 0){
+                        $('<div>').addClass('player').appendTo('.maze');
+                    }
+
+                    if($('.maze .goal').length == 0){
+                        $('<div>').addClass('goal').appendTo('.maze');
+                    }
+
+                    $('.maze .player').css({
+                        width: self.cell_w,
+                        height: self.cell_h,
+                        left: 0,
+                        top: 0
+                    });
+
+                    $('.maze .goal').css({
+                        width: self.cell_w,
+                        height: self.cell_h,
+                        left: self.goal.x * self.cell_w,
+                        top: self.goal.y * self.cell_h
+                    });
+                }
+
+                self.update_matrix = function(){
+                    var image = [0,0,0,0,0,0,0,0];
+                    var x, y;
+                    for(x = 0; x < 8; x++){
+                        image[x] = 0;
+                        for(y = 0; y < 8; y++){
+                            image[x] += maze[y][x] << (7-y);
+                            if(self.marble.x == x && self.marble.y == y){
+                                if(self.elapsed_ms < 2000){
+                                    image[x] += ((self.ms/200) % 2) << (7-y);
+                                }
+                                else
+                                {
+                                    image[x] += 1 << (7-y);
+                                }
+                            }
+                            if(self.goal.x == x && self.goal.y == y){
+                                image[x] += ((self.ms/500) % 2) << (7-y);
+                            }
+                        }
+                    }
+                    //console.log(self.matrix.outputs.display.data.image);
+                    self.matrix.outputs.display.data.brightness = 30;
+                    self.matrix.outputs.display.data.image = image;
+                    self.matrix.sync();
+                }
+
+                self.draw_player = function(){
+                    $('.maze .player').css({
+                        left: self.marble.x * self.cell_w,
+                        top: self.marble.y * self.cell_h
+                    });
+                }
+
+                self.stop = function(){
+
+                    self.running = false;
+                    clearInterval(self.interval);
+
+                }
+
+                self.mainLoop = function(){
+
+                    var t = millis();
+                    var ticks = Math.round(t/10);
+
+                    self.ms = t;
+                    self.elapsed_ms = self.ms - self.start_time;
+
+                    self.stage_run(t, ticks);
+
+                }
+
+                self.reset = function(){
+                    self.start_time = millis();
+                    self.level += 1;
+                    self.level %= self.levels.length;
+                    self.maze = self.levels[self.level];
+                    self.marble = {x:self.maze[8][0], y:self.maze[8][1]};
+                    self.goal = {x:self.maze[8][2], y:self.maze[8][3]};
+                    self.setup_maze();
+                }
+
+
+                self.stage_run = function(ms, ticks){
+
+                    switch(self.current_stage){
+                        case self.stages.running:
+                            var motion = self.motion.input_data;
+
+                            if(ms - self.last_marble_move > 1000/10){
+                                move_marble(motion.y, motion.x);
+                                self.draw_player();
+                                self.last_marble_move = ms;
+                            }
+
+                            //if(ms - self.last_matrix_update > 1000/20){
+                                self.update_matrix();
+                            //    self.last_matrix_update = ms;
+                            //}
+                            if(self.marble.x == self.goal.x && self.marble.y == self.goal.y){
+                                // GOAL!
+                                self.change_stage(ms,self.stages.goal);
+                                //console.log(self.marble, self.goal);
+                            }
+                            break;
+                        case self.stages.goal:
+
+                            self.score += 1;
+                            self.matrix.outputs.display.data.image = [255,255,255,255,255,255,255,255];
+                            var b = (Math.sin(ms/500) + 1.0) / 2.0;
+                            self.matrix.outputs.display.data.brightness = Math.round(30 * b);
+                            self.matrix.sync();
+                            if(ms - self.entered_stage > 2000){
+                                self.change_stage(ms, self.stages.running);
+                                self.reset();
+                            }
+                            break;
+                    }
+
+
+
+                }
+
+                self.change_stage = function(ms,new_stage){
+                    self.current_stage = new_stage;
+                    self.entered_stage = ms;
+                }
+
+                self.move_marble = function(motion_x, motion_y){
+                    var pos_old = {x:self.marble.x, y:self.marble.y};
+                    var pos_new = {x:self.marble.x, y:self.marble.y};
+
+                    motion_x -= 0.5;
+                    motion_y -= 0.5;
+
+                    //console.log(pitch, roll);
+
+                    var threshold = 0.05;
+
+                    if(motion_x < -threshold && pos_old.x != 7){
+                        pos_new.x += 1;
+                    }
+                    else if(motion_x > threshold && pos_old.x != 0){
+                        pos_new.x -= 1;
+                    }
+
+                    if(motion_y < -threshold && pos_old.y != 0){
+                        pos_new.y -= 1;
+                    }
+                    else if(motion_y > threshold && pos_old.y != 7){
+                        pos_new.y += 1;
+                    }
+
+                    pos_new = check_wall(pos_new);
+                    
+                    self.marble.x = pos_new.x;
+                    self.marble.y = pos_new.y;
+                }
+
+                self.check_wall = function(pos_new){
+                    if( maze[pos_new.y][pos_new.x] != 1 ){
+                        return {x:pos_new.x, y:pos_new.y};
+                    }
+                    else if( maze[pos_new.y][pos_new.x] != 1 ){
+                        return {x:self.marble.x, y:pos_new.y};
+                    }
+                    else if( maze[pos_new.y][pos_new.x] != 1 ){
+                        return {x:pos_new.x, y:self.marble.y};
+                    }
+                    return {x:self.marble.x, y:self.marble.y};
+                }
+
+                return self;
+            }
+
+            rockpool.runCookbookApp(myApp());
+        </script>
+    </div>
+    </body>
+</html>

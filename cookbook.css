@@ -1,0 +1,106 @@
+
+header h1 {
+    color:#FFF;
+    text-align: center;
+}
+
+.recipes {
+    text-align:center;
+}
+
+.recipe {
+    overflow:hidden;
+    display:inline-block;
+    width:300px;
+    height:350px;
+    background:rgba(255,255,255,0.9);
+    margin:10px 5px;
+    text-align:left;
+    box-sizing:border-box;
+    padding:10px;
+    position: relative;
+    opacity:0.5;
+}
+.recipe.enabled {
+    opacity:1.0;
+}
+.recipe h2, p, ul, li {margin:0;padding:0;list-style:none;}
+
+.recipe h2 {font-size:24px;font-weight:bold;}
+.recipe p {font-size:20px;}
+
+.recipe ul {display:block;
+    bottom:10px;
+    position: absolute;
+}
+.recipe li {
+    display:inline-block;
+    width:80px;
+    text-align:center;
+    font-weight:bold;
+    color:#333333;
+}
+.recipe li.available img {
+    background:#00CC00;
+}
+.recipe li img {
+    border:none;
+    outline:none;
+    width:80px;
+    height:80px;
+    border-radius:50%;
+    background:#CC0000;
+}
+.modules {
+    text-align:center;
+    padding-bottom:50px;
+}
+.modules div {
+    margin-left:10px;
+    display:inline-block;
+    border:none;
+    outline:none;
+    width:80px;
+    height:80px;
+    text-align: center;
+    font-family: FreeSans,Arimo,"Droid Sans",Helvetica,Arial,sans-serif;
+}
+.modules div img {
+    max-width:100%;
+    height:auto;
+}
+.modules div:nth-child(1){
+    margin-left:0px;
+}
+.modules div strong {
+    text-transform: lowercase;
+    display:block;
+    margin-top:5px;
+    color:#FFF;
+    font-weight:300;
+}
+.modules div span {
+    margin-top:5px;
+    background:#FFF;
+    border-radius:5px;
+    padding:0 5px;
+    color:#787980;
+}
+
+
+
+.icon-palette i.icon-colour, .icon-palette i.icon-motor {
+    background-color:#9879D3;
+}
+.icon-palette i.icon-motion, .icon-palette i.icon-number, .icon-palette i.icon-touch {
+    background-color:#ED1558;
+}
+.icon-palette i.icon-weather, .icon-palette i.icon-matrix {
+    background-color:#00B0B2;
+}
+.icon-palette i.icon-light, .icon-palette i.icon-joystick {
+    background-color:#02B186;
+}
+.icon-palette i.icon-rainbow, .icon-palette i.icon-dial, .icon-palette i.icon-slider {
+    background-color:#DBB100;
+}

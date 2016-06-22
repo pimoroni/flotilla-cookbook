@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Rockpool - Cookbook</title>
+        <link rel="stylesheet" href="http://flotil.la/shipshape/css/jquery.fancybox.min.css">
+        <link rel="stylesheet" href="http://flotil.la/shipshape/css/pure-min.css">
+        <link rel="stylesheet" href="http://flotil.la/shipshape/css/rockpool.css">
+        <link rel="stylesheet" href="../cookbook.css">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="viewport" content="width = device-width, user-scalable = no, initial-scale = 1.0">
+
+        <style type="text/css">
+        .gauge {
+  width:40px;
+  height:200px;
+  background:#EEE;
+  border:5px solid #FFF;
+  border-bottom-color:#DDD;
+  border-left-colour:#E5E5E5;
+  border-right-color:#D5D5D5;
+}
+
+.gauge div {
+  width:100%;
+  height:10%;
+  box-sizing:border-box;
+  border:2px solid #EEE;
+  opacity:0.1;
+  transition:opacity 0.2s, -webkit-filter 0.2s;
+  -webkit-filter:grayscale(50%);
+}
+
+.gauge .lit {
+  opacity:1.0;
+  transition:opacity 0.05s, -webkit-filter 0.05s;
+  -webkit-filter:grayscale(0%);
+}
+
+.fan {
+  position:relative;
+  width:200px;
+  height:200px;
+  border-radius:50%;
+  background:#555;
+}
+.blade {
+  width:20px;
+  height:20px;
+  transform-origin:50% 50%;
+  background:#000;
+  position:absolute;
+  left:50%;
+  top:50%;
+  border-radius:50%;
+  margin-left:-10px;
+  margin-top:-10px;
+}
+.blade:before, .blade:after {
+  content: '';
+  display:block;
+  position: absolute;
+  width:105px;
+  height:20px;
+  border-radius:100%;
+  background:#000;
+  top:50%;
+  margin-top:-10px;
+}
+.blade:after {
+  right:0;
+}
+        </style>
+    </head>
+    <body>
+        <div class="main">
+            <div style="margin: 0px auto;width:100%;">
+                <div class="app">
+                    <header><h1>Friendly Fan</h1></header>
+                    <div class="fan">
+<div class="blade">
+
+</div>
+</div>
+
+                </div>
+                <div class="modules icon-palette">
+                    <header><h1>Modules</h1></header>
+                </div>
+            </div>
+        </div>
+
+        <div style="display:none;" class="palettes"></div>
+
+        <script src="http://flotil.la/shipshape/js/lib/jquery-2.1.1.min.js"></script>
+        <script src="http://flotil.la/shipshape/js/lib/fastclick.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.languify.js"></script>
+        <script src="http://flotil.la/shipshape/js/socket.io.min.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.widget.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.rule.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.inputs.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.outputs.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.converters.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.palette.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.module.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.modules.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.client.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.save.js"></script>
+        <script src="http://flotil.la/shipshape/js/rockpool.find-hosts.worker.js"></script>
+        <script src="../lib/scoreboard.js"></script>
+        <script src="../cookbook.js"></script>
+
+        <script src="http://flotil.la/shipshape/js/lib/jquery.fancybox.min.js"></script>
+
+        <script>
+            "use strict";
+
+var HSVtoRGB = function(h, s, v) {
+  var r, g, b, i, f, p, q, t;
+  if (arguments.length === 1) {
+    s = h.s, v = h.v, h = h.h;
+  }
+  i = Math.floor(h * 6);
+  f = h * 6 - i;
+  p = v * (1 - s);
+  q = v * (1 - f * s);
+  t = v * (1 - (1 - f) * s);
+  switch (i % 6) {
+    case 0: r = v, g = t, b = p; break;
+    case 1: r = q, g = v, b = p; break;
+    case 2: r = p, g = v, b = t; break;
+    case 3: r = p, g = q, b = v; break;
+    case 4: r = t, g = p, b = v; break;
+    case 5: r = v, g = p, b = q; break;
+  }
+  return {
+    r: r,
+    g: g,
+    b: b
+  };
+}
+
+var gauge = function(container){
+    var steps = [];
+    container.addClass('gauge');
+    for(var hue = 0; hue < 200; hue+=20){
+    
+       var rgb = HSVtoRGB(hue/360, 1.0, 1.0)
+       var step = $('<div>').css({
+           background:'rgb(' + Math.round(rgb.r*255) + ',' + Math.round(rgb.g*255) + ',' + Math.round(rgb.b*255) + ')'
+       });
+       
+       container.append(step);
+       steps.push(step);
+    }
+    
+    var _public = {
+       'set_value': function(value){
+         value = 1.0 - value;
+         for(var x = 0; x < steps.length; x++){
+             steps[x].toggleClass('lit', Math.floor(value * 10) <= x)
+         }
+         return _public;
+       }
+    }
+    
+    return _public;
+}
+
+
+            var myApp = function(){
+                self.requires = ['weather','motor'];
+                self.running = null;
+                self.interval = null;
+
+                self.temp_min = 20;
+                self.temp_max = 45;
+
+                self.motor = null;
+                self.weather = null;
+
+                self.rotation = 0;
+                self.accelleration = 0;
+                self.fan = $('.fan .blade');
+
+                self.gauge = new gauge($('<div>').addClass('.gauge').appendTo('.app'));
+
+                self.run = function(){
+
+                    if(self.running) return false;
+                    self.running = true;
+
+                    self.motor = rockpool.firstOfType('motor');
+                    self.weather = rockpool.firstOfType('weather');
+
+                    self.interval = setInterval(self.mainLoop,1000/60);
+
+                }
+
+                self.stop = function(){
+
+                    self.running = false;
+                    clearInterval(self.interval);
+
+                }
+
+                self.mainLoop = function(){
+
+                    var temperature = (self.weather.inputs.temperature.data.temperature / 100);
+
+                    temperature = Math.max(temperature, self.temp_min);
+                    temperature = Math.min(temperature-self.temp_min,self.temp_max - self.temp_min);
+
+                    self.gauge.set_value(temperature/(self.temp_max - self.temp_min));
+
+                    self.accelleration += (temperature/(self.temp_max - self.temp_min))*2;
+                    self.accelleration *= 0.95;
+
+                    self.rotation += self.accelleration;
+                    self.rotation %= 360;
+
+                    self.speed = (Math.min(self.accelleration,40) / 40) * 10;
+
+                    motor.outputs.speed.data.speed = Math.round(100 * self.speed);
+                    motor.sync();
+                   
+                    self.fan.css({
+                      transform:'rotate(' + rotation + 'deg)'
+                    });
+
+
+                }
+
+                return self;
+
+            }
+
+            rockpool.runCookbookApp(myApp());
+        </script>
+    </body>
+</html>
