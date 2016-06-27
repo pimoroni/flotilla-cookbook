@@ -457,6 +457,7 @@
                 return self;
                 
             }
+		$('body').on('click',function(){
             T("audio").load("drumkit.wav", function(){
                 BD  = this.slice(   0,  500).set({bang:false});
                 SD  = this.slice( 500, 1000).set({bang:false});
@@ -468,6 +469,8 @@
                 window.app = myApp();
                 rockpool.runCookbookApp(window.app);
             });
+			$('body').off('click');
+		});
         </script>
     </body>
 </html>
