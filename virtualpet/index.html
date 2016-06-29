@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Cookbook Test - Flotilla</title>
+        <link rel="stylesheet" href="http://flotil.la/rockpool/css/jquery.fancybox.min.css">
+        <link rel="stylesheet" href="http://flotil.la/rockpool/css/pure-min.css">
+        <link rel="stylesheet" href="http://flotil.la/rockpool/css/rockpool.css">
+        <link rel="stylesheet" href="../cookbook.css">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="viewport" content="width = device-width, user-scalable = no, initial-scale = 1.0">
+
+        <style type="text/css">
+
+        .stat_bar {
+            text-transform: lowercase;
+            color:#333;
+            line-height:20px;
+        }
+
+        .stage {
+            margin:0 auto;
+            width:800px;
+            height:556px;
+        }
+
+        .pet:before {
+            content: '';
+            display: block;
+            width:110px;
+            height:75px;
+            background-size:100% 100%;
+            position:absolute;
+            left:0;
+            top:5px;
+        }
+        .pet.mood-sad:before {
+            background:url('face-sad.png');
+            background-size:100% 100%;
+        }
+        .pet.mood-hungry:before {
+            background:url('face-hungry.png');
+            background-size:100% 100%;
+        }
+        .pet.mood-sick:before {
+            background:url('face-sick.png');
+            background-size:100% 100%;
+        }
+
+
+        </style>
+    </head>
+    <body>
+        <div class="main">
+            <div class="stage">
+            </div>
+            <div class="modules icon-palette">
+                <header><h1>Modules</h1></header>
+            </div>
+        </div>
+
+        <div style="display:none;" class="palettes"></div>
+
+        <script src="http://flotil.la/rockpool/js/lib/jquery-2.1.1.min.js"></script>
+        <script src="http://flotil.la/rockpool/js/lib/fastclick.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.languify.js"></script>
+        <script src="http://flotil.la/rockpool/js/socket.io.min.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.widget.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.rule.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.inputs.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.outputs.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.converters.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.palette.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.module.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.modules.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.client.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.save.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.find-hosts.worker.js"></script>
+        <script src="../cookbook.js"></script>
+
+        <script src="http://flotil.la/rockpool/js/lib/jquery.fancybox.min.js"></script>
+
+        <script type="text/javascript">
+
+            window.requestAnimFrame = (function(){
+              return  window.requestAnimationFrame       ||
+                      window.webkitRequestAnimationFrame ||
+                      window.mozRequestAnimationFrame    ||
+                      function( callback ){
+                        window.setTimeout(callback, 1000 / 60);
+                      };
+            })();
+
+    var modes = {
+        'normal': 0, // Will roam around freely
+        'hungry': 1, // Will ask for a random fruit, show something of same colour
+        'toilet': 2, // Will go to the toilet, tap to clean up, or plug in a slider and sweep back-n-forth
+        'game':   3, // Playing hide and seek 
+        'sick':   4,
+        'sad':    5,
+    }
+
+    var similar = function(a,b,diff){
+        return (Math.abs(a-b) < diff);
+    }
+
+    var foods = [
+        {'name':'orange', 'compare':function(r,g,b){
+
+            if( similar(r,120,10) && similar(g,80,10) && similar(b,45,10) ){
+                console.log( 'Oraanngeeee! ' );
+                return true;
+            }
+            return false;
+        }},
+        {'name':'bannana','compare':function(r,g,b){
+            if( similar(r,85,10) && similar(g,90,10) && similar(b,65,10) ){
+                console.log( 'Bannanananan! ' );
+                return true; // Kinda yellow?
+            }
+            return false;
+        }},
+        {'name':'apple', 'compare':function(r,g,b){
+            if( similar(r,85,10) && similar(g,95,10) && similar(b,65,10) ){
+                console.log( 'Bannanananan! ' );
+                return true; // Kinda yellow?
+            }
+            return false;
+        }}
+    ];
+
+    var alive      = false
+    var mode       = modes['normal'];
+    var mode_start = 0
+
+    var tick_length = 1000
+
+    var age        = 0
+    var hunger     = 0
+    var weight     = 0
+    var happy      = 0
+    var clean      = 0
+    var health     = 0
+
+    var poo        = false
+    var poo_x      = 0
+    var poo_y      = 0
+
+    var max_stat   = 10
+
+
+    var start_time = 0;
+    var ticks      = 0;
+
+    var food       = null;
+    var wants_food = null;
+
+    fail = function(){
+        if( health <= 0 ){
+            alive = false
+        }
+    }
+
+    grow = function(){
+
+        //if( weight <= 0 ) adjust_health(-1);
+        //if( happy  <= 0 ) adjust_health(-1);
+        //if( clean  <= 0 ) adjust_health(-1);
+
+        if( hunger >= max_stat * 0.9 ) adjust_health(-2);
+
+        // Overweight or malnourished equals bad health
+        if( weight == 0 || weight > max_stat*0.8 ) adjust_health(-1);
+
+        // Good health equals happiness
+        if( health > max_stat*0.8) adjust_health(1);
+
+        // Sadness equals bad health
+        if( happy == 0 ) adjust_health(-1);
+
+        // Dirtyness equals bad health and happiness
+        if( clean == 0 ) {
+            adjust_health(-1);
+            adjust_happy(-1);
+        }
+
+        age++;
+        adjust_weight(1);
+        adjust_happy(-1);
+        adjust_hunger(2);
+
+        fail();
+
+    }
+
+    var stroll = function(){
+        var dir_switch = random(1,5);
+        //console.log('dir_switch',dir_switch);
+        if( dir_switch == 1 ){
+
+            //console.log('Changing direction!');
+            pet_x_dir = random(-1,1);
+            pet_y_dir = random(-1,1);
+
+        }
+    }
+
+    var tick = function(){
+
+
+        ticks++;
+
+        //console.log('mode', mode, modes['normal']);
+
+        switch( mode ){
+            case modes['sad']:
+                set_mood('sad');
+
+                stroll();
+
+                if(happy > 2) mode = modes['normal'];
+
+                if( ticks % 10 == 0 && random(0,1) ){
+
+                    adjust_hunger(1);
+                    adjust_happy(-1);
+
+                }
+                break;
+
+            case modes['normal']:
+                clear_mood();
+                stroll();
+
+                if( food && ticks % 2 ){
+                    feed();
+                }
+
+                var mode_switch = random(1,15);
+                //console.log('mode switch:',mode_switch);
+                switch( mode_switch ){
+                    case 1:
+                    case 2:
+                    case 3:
+                        if( hunger > 3 ){
+                            mode = modes['hungry'];
+                        }
+                        break;
+                    case 6:
+                        if( hunger < 3 ){
+                            mode = modes['toilet'];
+                        }
+                        break;
+                }
+
+                // Hunger and happiness entropy over time
+                if( ticks % 10 == 0 && random(0,1) ){
+
+                    adjust_hunger(1);
+                    adjust_happy(-1);
+
+                    if( poo ){
+                        adjust_clean(-1);
+                    }
+
+                    // Overweight, eek!
+                    if( weight == max_stat ){
+                        adjust_health(-1);
+                    }
+
+                }
+
+                if(happy < 2){
+                    mode = modes['sad'];
+                }
+
+
+                break;
+            case modes['toilet']:
+
+                /*if( poo ){
+                    mode = modes['normal'];
+                    break;
+                };*/
+
+
+                if( mode_start == 0 ){
+                    mode_start = millis();
+
+                    adjust_hunger(1);
+                    adjust_happy(1);
+
+                    pet_x_dir = 0;
+                    pet_y_dir = 0;
+                }
+
+                //console.log('STRAIN!!!!');
+
+                if( millis() - mode_start > 1000 ){ 
+
+                    //console.log('PLOP!');
+
+                    poo   = true;
+                    poo_x = pet_x;
+                    poo_y = pet_y;
+
+                    //var poop = dom.find('.poop');
+
+                    //if( poop.length == 0 ){
+                    var poop = $('<div>').hide().addClass('poop').appendTo(dom).css({
+                            position:'absolute',
+                            display:'block',
+                            background:'url("plop.png")',
+                            'backgroundSize':'100% 100%'
+                        });
+                    //}
+
+                    //console.log('Poo size: ',Math.round(40 - ( 10 * (poo_x / pet_max_y) ) ) );
+                    poop.css({
+                        left:poo_x,
+                        bottom:poo_y,
+                        width:Math.round(60 - ( 30 * (poo_y / pet_max_y) ) ) + 'px',
+                        height:Math.round(80 - ( 40 * (poo_y / pet_max_y) ) ) + 'px'
+                    }).fadeIn(500);
+
+
+                    mode  = modes['normal'];
+                    mode_start = 0;
+
+                }
+
+                break;
+            case modes['hungry']:
+
+                if( mode_start == 0 ){
+                    mode_start = millis();
+                    // Setup this mode
+
+                    
+                    stroll();
+
+                    pet_y_dir = -1;
+
+                    // Hungry hungry hippo!
+                    adjust_hunger(1);
+
+
+                    wants_food = random(0,foods.length);
+                    //console.log('I WANT A ' + foods[wants_food].name);
+
+                    //console.log('HUNGRY!');
+
+                    set_mood('hungry');
+                }
+
+                if( pet_y > 10 ){
+                    pet_y_dir == 0;
+                }
+                //console.log('FEED ME!');
+
+
+                if( food != null ){
+                    mode = modes['normal'];
+                    adjust_hunger(-2);
+                    mode_start = 0;
+                    food = null
+                }
+
+                    // Successful feeding in this mode counts for 2 hunger instead of 1
+
+
+                if( millis() - mode_start > 30000 ){ // 30 seconds
+                    mode_start = 0;
+                    mode = modes['normal'];
+
+                    // Eep, we didn't feed the poor soul
+                    // Extra hunger ensues!
+                    adjust_hunger(1);
+                    adjust_happy(-1); // And he's sad :(
+
+                    clear_mood();
+                   // console.log('END HUNGRY!');
+                }
+
+                break;
+        }
+
+        if( ticks == 120 ){
+            grow();
+            ticks = 0;
+        }
+
+        /*console.log([
+            '<3',happy,
+            'HP',health,
+            'Hunger',hunger,
+            'Clean',clean,
+            'Weight',weight,
+            'Age',age
+        ].join(" : "));*/
+
+        update_bar('health',health);
+        update_bar('hunger',hunger);
+        update_bar('clean',clean);
+        update_bar('weight',weight);
+        update_bar('happy',happy);
+        update_bar('age',age);
+    }
+
+
+    var clear_mood = function() {
+        pet.removeClass('mood-hungry mood-sick mood-sad');
+    }
+
+    var set_mood = function(mood){
+        clear_mood();
+        pet.addClass('mood-' + mood);
+    }
+
+    var update_bar = function(bar,value){
+        bars.find('.'+bar).css('width',Math.round(100*(value/10)) + '%');
+    }
+
+    var adjust_weight = function(val){
+        weight += val;
+        if( weight < 0  ) weight = 0;
+        if( weight > max_stat ) weight = max_stat;
+    }
+
+    var adjust_happy = function(val){
+        happy += val;
+        if( happy < 0  ) happy = 0;
+        if( happy > max_stat ) happy = max_stat;
+    }
+
+    var adjust_hunger = function(val){
+        hunger += val;
+        if( hunger < 0  ) hunger = 0;
+        if( hunger > max_stat ) hunger = max_stat;
+    }
+
+    var adjust_clean = function(val){
+        clean += val;
+        if( clean < 0  ) clean = 0;
+        if( clean > max_stat ) clean = max_stat;
+    }
+
+    var adjust_health = function(val){
+        health += val;
+        if( health < 0  ) health = 0;
+        if( health > max_stat ) health = max_stat;
+    }
+
+    var play = function(){
+
+        // Playing promotes happiness and weight loss
+        adjust_happy(1);
+        adjust_weight(-1);
+        adjust_hunger(1);
+
+    }
+
+    var snack = function(){
+
+        // Snacking promotes weight gain & happiness
+        adjust_weight(1);
+        adjust_happy(1);
+
+    }
+
+    var feed = function(){
+
+        // Feeding promotes weight gain
+        adjust_hunger(-1);
+        adjust_weight(1);
+
+    }
+
+    var medicine = function(){
+
+        if( health < 10 ){
+            health += 1;
+        }
+
+    }
+
+    last_sweep_position = 0;
+    sweeps = 0;
+
+
+    var fn_sweep = function(my_dial){
+
+        //console.log(my_dial.position);
+
+        var p = my_dial.position;
+
+        if( poo ){
+
+            if( p == 0 && last_sweep_position == 1 ){
+                //console.log('SWEEEP!!!!');
+                sweeps++;
+                last_sweep_position = 0;
+            }
+            if( p == 1 ){
+                last_sweep_position = 1;
+            }
+
+            if( sweeps > 3 ){
+                //console.log('ALL GONE!!!');
+                poo = false;
+                adjust_clean(1);
+                dom.find('.poop').fadeOut('slow');
+                sweeps = 0;
+            }
+
+        }
+        else
+        {
+            if( p == 0 && last_sweep_position == 1 ){
+                medicine();
+            }
+            if( p == 1 ){
+                last_sweep_position = 1;
+            }
+
+        }
+
+
+
+    };
+
+    var loop = function(modules){
+        var now_time = millis();
+
+        //console.log(dom.is(':visible'));
+
+        pet_x += pet_x_dir;
+        pet_y  += pet_y_dir;
+
+        if( pet_x > pet_max_x ){
+            pet_x = pet_max_x;
+            pet_x_dir *= 1;
+        }
+        if( pet_x < 0 ){
+            pet_x = 0;
+            pet_x_dir *= 1;
+        }
+
+        if( pet_y > pet_max_y ){
+            pet_y = pet_max_y;
+            pet_y_dir *= 1;
+        }
+        if( pet_y < 0 ){
+            pet_y = 0;
+            pet_y_dir *= 1;
+        }
+        
+        //console.log(pet_y,pet_y/pet_max_y);
+        pet_size = 1.0 - ( 0.2 * (pet_y / pet_max_y) );
+
+//(0.3 * (age / 20)) -
+
+        pet.css({
+            transform:"translate(" + pet_x + "px,-" + pet_y + "px) scale(" + pet_size + ")"
+        });
+
+        if (now_time - last_tick >= tick_length){
+            tick();
+            last_tick = now_time;
+        }
+
+
+        if(rockpool.firstOfType('number')){
+            rockpool.firstOfType('number').number = health/10;
+        }
+    };
+
+    var setup = function(){
+        pet_max_x = 690;
+        pet_max_y = 80;
+
+        pet_x_dir = 1;
+        pet_y_dir = 1;
+
+        pet_x = 400;
+        pet_y = 0;
+
+        pet_size = 1.0; //0.5 + (0.4 * (age / 20)) - ( (pet_y / pet_max_y) * 0.4 );
+
+
+        dom = $('<div>').css({
+            width:800,
+            height:566,
+            background:"url('backdrop.png')",
+            backgroundSize:'100% 100%',
+            position:'absolute'
+        });
+        pet = $('<div>').addClass('pet').css({
+            position:'absolute',
+            left:0,
+            bottom:0,
+            width:113,
+            height:134,
+            transition:'0.2s all',
+            background:"url('character.png')",
+            backgroundSize:'113px 134px',
+            transformOrigin:'bottom left',
+            transform:"translate(" + pet_x + "px,-" + pet_y + "px) scale(" + pet_size + ")",
+            zIndex:10
+        }).appendTo(dom);
+        $('<div>')
+            .addClass('close')
+            .on('click',function(){$.fancybox.close()})
+            .css({
+                position:'absolute',
+                right:15,
+                top:12,
+                width:46,
+                height:46,
+                borderRadius:'50%',
+                cursor:'pointer'
+            })
+            .appendTo(dom);
+        bar_css = {display:'block',height:20,backgroundColor:'rgba(255,255,255,0.9)'};
+        bars = $('<div>')
+            .css({width:200})
+            .appendTo(dom)
+            .append($('<div>').addClass('stat_bar').css(bar_css).addClass('health').text('HP'))
+            .append($('<div>').addClass('stat_bar').css(bar_css).addClass('hunger').text('Hunger'))
+            .append($('<div>').addClass('stat_bar').css(bar_css).addClass('clean').text('Clean'))
+            .append($('<div>').addClass('stat_bar').css(bar_css).addClass('happy').text('Happy'))
+            .append($('<div>').addClass('stat_bar').css(bar_css).addClass('weight').text('Weight'))
+            .append($('<div>').addClass('stat_bar').css(bar_css).addClass('age').text('Age'))
+            .append($('<div>').addClass('stat_bar').css(bar_css).addClass('color').text('Color'));
+        $('.stage').append(dom);
+
+
+        alive  = true
+        hunger = 0
+        happy  = 5
+        age    = 1
+        clean  = 5
+        weight = 1
+        health = 5
+        last_tick = start_time = millis();
+    };
+
+
+
+
+
+
+
+            var events = events || {};
+
+            //on(3, 'dial', 'change', fn_sweep);
+            events['dial'] = fn_sweep;
+
+            //on(6, 'slider', 'change', fn_sweep);
+            events['slider'] = fn_sweep;
+
+            //on(1, 'switch', 'change', function(my_switch){
+            events['switch'] = function(my_slider){
+
+                //console.log("BUTTON!!!", my_switch.button);
+
+            };
+
+            //on(4, 'colour', 'change', function(){
+            events['colour'] = function(r, g, b){
+
+                //console.log(r, g, b);
+
+                var r = Math.round( r * 255 );
+                var g = Math.round( g * 255 );
+                var b = Math.round( b * 255 );
+
+                for(var f = 0; f < foods.length; f++){
+                    if( foods[f].compare(r,g,b) ){
+                        food = foods[f].name;
+                        break;
+                    }
+
+                }
+
+                if( bars ){
+                    bars.find('.color').css({
+                        backgroundColor:'rgb(' + [r,g,b].join(',') + ')',
+                        width:'100%'
+                    });
+                }
+
+            };
+
+            events['joystick'] = function(my_slider){
+
+                //console.log(my_slider.position);
+                //console.log(my_slider);
+
+                var balance = my_slider.y - 0.5; // Convert 0 - 1 position into -0.5 - 0.5 delta
+                balance *= 2;                           // Convert -0.5 - 0.5 to -1 to 1 delta
+
+                balance_x = balance; 
+
+            }
+
+            setup();
+
+
+            var myApp = function(){
+                self.requires = ['colour'];
+
+                self.run = function(){
+
+                    if(self.running) return false;
+                    self.running = true;
+
+                    self.interval = setInterval(self.mainLoop, 100);
+
+                }
+
+                self.stop = function(){
+
+                    self.running = false;
+                    clearInterval(self.interval);
+
+                }
+
+                self.mainLoop = function(){
+
+                    var colour = rockpool.firstOfType('colour');
+                    if(colour != null){
+                        
+                        var r = colour.inputs.colour.data.r;
+                        var g = colour.inputs.colour.data.g;
+                        var b = colour.inputs.colour.data.b;
+
+                        events['colour'](r, g, b);
+                    }
+
+
+                }
+
+                return self;
+            }
+
+            rockpool.runCookbookApp(myApp());
+
+
+
+            (function animloop(){
+              requestAnimFrame(animloop);
+              loop();
+            })();
+
+        </script>
+
+    </div>
+    </body>
+</html>
