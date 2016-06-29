@@ -52,6 +52,93 @@
             .buttons li.on {
                 color:#00CC00;
             }
+
+            .lights {
+                display:block;
+                width:710px;
+                height:100px;
+                background:#DBB100;
+                border-radius:20px;
+                margin:0 auto;
+                position:relative;
+            }
+
+            .lights ul:before {
+                content: '';
+                display:block;
+                position:absolute;
+                width:50px;
+                height:80px;
+                background:#DDD;
+                left:-10px;
+                top:10px;
+            }
+
+            .lights:before, .lights:after {
+                content: '';
+                display:block;
+                background:#000;
+                width:30px;
+                height:30px;
+                border-radius:50%;
+                position:absolute;
+                top:50%;
+                margin-top:-30px;
+                margin-left:-30px;
+                left:160px;
+                border:15px solid #E1B909;
+            } 
+            .lights:after {
+                left:580px;
+            }
+
+            .lights li, .lights ul {
+                list-style:none;
+                margin:0;
+                padding:0;
+            }
+
+            .lights li {
+                width:60px;
+                height:60px;
+                display:block;
+                background:#FFFFFF;
+                margin-left:80px;
+                margin-top:20px;
+                float:left;
+            }
+
+            .lights li:nth-child(1){
+                margin-left:60px;
+            }
+
+            .lights li span {
+                width:50px;
+                height:50px;
+                display:block;
+                border-radius:50%;
+                background:#EEE;
+                margin-left:5px;
+                margin-top:5px;
+            }
+
+            .notes {
+                position:relative;
+                width:640px;
+                height:140px;
+                margin:0 auto;
+                border:2px solid #FFF;
+                overflow:hidden;
+                margin-bottom:20px;
+            }
+            .notes .note {
+                display:block;
+                background:#FFF;
+                width:10px;
+                height:4px;
+                position:absolute;
+                -webkit-transition:left 0.2s;
+            }
         </style>
     </head>
     <body>
@@ -59,7 +146,7 @@
             <div style="margin: 0px auto;width:100%;">
                 <div class="app">
                     <header><h1>Synth</h1></header>
-                    <ul>
+                    <ul style="display:none;">
                         <li>Dial: <input type="text" class="watch-dial" />
                         <li>Slider: <input type="text" class="watch-slider" />
                         <li>Light: <input type="text" class="watch-light" />
@@ -68,12 +155,26 @@
                         <li>Touch Three: <input type="text" class="watch-touch-three" />
                         <li>Touch Four: <input type="text" class="watch-touch-four" />
                     </ul>
+                    <div class="notes">
+                    </div>
+                    <div class="lights">
+                        <ul>   
+                            <li><span></span></li>
+                            <li><span></span></li>
+                            <li><span></span></li>
+                            <li><span></span></li>
+                            <li><span></span></li>
+                        </ul>
+                    </div>
                     <ul class="buttons">
                         <li class="on">1<span>Tri</span></li>
                         <li>2<span>Saw</span></li>
                         <li>3<span>Sin</span></li>
                         <li>4<span>&nbsp;</span></li>
                     </ul>
+                </div>
+                <div class="modules icon-palette">
+                    <header><h1>Modules</h1></header>
                 </div>
             </div>
         </div>
@@ -109,6 +210,61 @@
 
             var drum, BD, SD, HH1, HH2, CYM;
 
+            function updateVirtualNoteDisplay(notes){
+                var dom_display = $('.notes');
+                var l = notes.length;
+
+                var baseline = 88*4;
+
+                for(var x = 0; x < l; x++){
+                    if( (notes[x] * 4) < baseline ) baseline = notes[x] * 4; 
+                }
+
+                for(var x = 0; x < l; x++){
+                    var note = notes[x];
+                    var dom_note = dom_display.find('.note:eq(' + x + ')');
+
+                    if(dom_note.length == 0){
+                        dom_note = $('<div>').addClass('note').css({
+                            left: 640 - (x * 40) - 40
+                        }).appendTo(dom_display);
+                    }
+
+
+                    dom_note.css({
+                        top:(note * 4) - baseline + 4
+                    })
+                }
+            }
+
+            function updateVirtualRainbow(buf){
+                console.log(buf);
+                if(buf.length == 15){
+
+                    for(var x = 0; x < 15; x+=3){
+                        var l = Math.round(x / 3);
+
+                        var r = buf[x];
+                        var g = buf[x+1];
+                        var b = buf[x+2];
+
+                        $('.lights li:eq(' + l + ') span').css({
+                            background:'rgb(' + [r,g,b].join(',') + ')',
+                            'box-shadow': '0px 0px 30px rgba(' + [r,g,b].join(',') + ', 0.4)'
+                        })
+
+                        if(r == 0 && g == 0 && b == 0){
+                           $('.lights li:eq(' + l + ') span').css({
+                                background:'#EEEEEE',
+                                'box-shadow': 'none'
+                            })
+                        }
+
+                    }
+
+                }
+            }
+
             Math.randomNth = function(seed, n){
                 Math.seedrandom(seed);
                 while(n--){Math.random()}
@@ -128,13 +284,21 @@
                 self.history_length = 6;
                 self.note_history = [];
 
+                self.output_history = [];
+                self.output_history_length = 16;
+
                 self.random = function(min, max){
                     return Math.floor(Math.random() * (max-min)) + min;
                 }
 
                 self.addToHistory = function(note){
                     self.note_history.unshift(note);
-                    self.note_history = self.note_history.slice(0,history_length);
+                    self.note_history = self.note_history.slice(0,self.history_length);
+
+                    self.output_history.unshift(note);
+                    self.output_history = self.output_history.slice(0,self.output_history_length);
+
+                    updateVirtualNoteDisplay(self.output_history);
                 }
 
                 self.millis = function(){
@@ -341,7 +505,7 @@
                     var light = self.scaleLight(self.light.inputs.visible.data.vis); 
 
                     if(light > 0){
-                    self.d_beam.noteOn(self.snapToScale(90 - (light%60)), 100);
+                        self.d_beam.noteOn(self.snapToScale(90 - (light%60)), 100);
                     }   
 
                     /*if( light > 0 ){
@@ -438,6 +602,8 @@
                         //console.log(window.app.rainbow.host, window.app.rainbow.channel+1, window.app.rainbow.code, rainbowBuf);
                         // Internally channels are zero indexed, but the dock counts from 1
                         rockpool.sendHostUpdate(window.app.rainbow.host, window.app.rainbow.channel + 1, window.app.rainbow.code,rainbowBuf);   
+
+                        updateVirtualRainbow(rainbowBuf);
                     }
                 }
                 self.lastNote = 0;
