@@ -14,31 +14,61 @@
 
             .stage {
                 position:relative;
-                width:800px;
-                height:400px;
+                width:640px;
+                height:360px;
+                margin:0 auto;
+                background: transparent url('background.jpg');
+                overflow:hidden;
             }
             .countdown {
                 position:absolute;
-                width:800px;
-                height:400px;
+                width:640px;
+                height:360px;
                 left:0;
                 top:0;
                 font-size:100px;
                 text-align:center;
-                line-height:400px;
+                line-height:360px;
                 color:#333;
                 background:rgba(255,255,255,0.8);
+            }
+            .bubble {
+                width:240px;
+                height:240px;
+                background:url('bubble.png');
+                position:absolute;
+                left:320px;
+                margin-left:-120px;
+                top:240px;
             }
 
             .balance {
                 position:absolute;
-                left:380px;
-                bottom:0px;
-                width:40px;
-                height:300px;
-                -webkit-transform-origin:20px 300px;
+                left:170px;
+                bottom:134px;
+                width:300px;
+                height:150px;
+                -webkit-transform-origin:150px 284px;
                 -webkit-transform:rotate(0deg);
                 background:#000;
+                background: transparent url('hedgehog_body.png');
+            }
+            .balance:after {
+                content:'';
+                display:block;
+                position:absolute;
+                width:60px;
+                height:14px;
+                background: transparent url('hedgehog_legs.png') no-repeat;
+                bottom:-14px;
+                left:50%;
+                margin-left:-30px;
+            }
+            .balance.step_left:after {
+                background-position:0 -14px;
+            }
+            .balance.step_right:after {
+                background-position:0 -28px;
             }
 
             .wind {
@@ -47,36 +77,60 @@
                 height:20px;
             }
 
+            .wind-label {
+                position:absolute;
+                top:0;
+                width:80px;
+                left:280px;
+                background:#fb8b32;
+                height:20px;
+                color:#FFF;
+                text-align:center;
+            }
             .wind.right {
-                left:400px;
+                left:360px;
                 top:0px;
                 width:10px;
                 background:#CC0000;
-                border-left:1px solid #220000;
+                border-left:2px solid #220000;
             }
             .wind.left {
-                right:400px;
+                right:360px;
                 top:0px;
                 width:10px;
                 background:#CC0000;
-                border-right:1px solid #220000;
+                border-right:2px solid #220000;
             }
             .score {
                 position:absolute;
-                right:0;
+                left:0;
                 bottom:0;
+                font-size:30px;
+                color:#FFFFFF;
+                padding:10px;
+                background:#fb8b32;
+                width:100px;
+                border-top-right-radius:20px;
             }
 
         </style>
     </head>
     <body>
         <div class="main">
-            <div class="stage">
-                <div class="wind left"></div>
-                <div class="wind right"></div>
-                <div class="balance"></div>
-                <div class="score"></div>
-                <div class="countdown"></div>
+            <div class="app">
+                <header><h1>Balance</h1></header>
+                <div class="stage">
+                    <div class="wind left"></div>
+                    <div class="wind-label">&laquo; wind &raquo;</div>
+                    <div class="wind right"></div>
+                    <div class="balance"></div>
+                    <div class="bubble"></div>
+                    <div class="score"></div>
+                    <div class="countdown"></div>
+                </div>
+                <div class="modules icon-palette">
+                    <header><h1>Modules</h1></header>
+                </div>
             </div>
         </div>
 
@@ -129,6 +183,7 @@
                 self.dom_score = self.dom_stage.find('.score');
                 self.dom_balance = self.dom_stage.find('.balance');
                 self.dom_countdown = self.dom_stage.find('.countdown');
+                self.dom_bubble = self.dom_stage.find('.bubble');
 
                 self.run = function(){
 
@@ -170,7 +225,7 @@
                     }
 
                     var d = Math.round((ms - self._start_time) / 1000);
-                    console.log('Score show',d);
+                    //console.log('Score show',d);
 
                     self.dom_countdown.show().html('Score: ' + self.last_score);
 
@@ -198,7 +253,7 @@
                         self._is_running = true;
                     }
                     var d = Math.round((ms - self._start_time) / 1000);
-                    console.log('Countdown',d);
+                    //console.log('Countdown',d);
                     switch(d){
                         case 0:
                             self.dom_countdown.show().text('Ready');
@@ -225,19 +280,19 @@
 
                     if( ticks % random(5,15) == 0 ){
                         self.jitter_x = randomf(-0.01,0.01); // Tiny natural imbalance
-                        //console.log('Jitter',self.jitter_x);
+                        ////console.log('Jitter',self.jitter_x);
                     }
-                    if( ticks % random(100,300) == 0 ){
+                    if( random(100,300) % 17 == 0 ){
                         self.wind_x = randomf(-0.5,0.5); // Big nasty wind forces!
-                        //console.log('Wind',self.wind_x);
+                        ////console.log('Wind',self.wind_x);
                     }
                     
                     if( self.wind_x < 0 ){
-                        self.dom_wind_left.css({width:Math.abs(self.wind_x)*400});
+                        self.dom_wind_left.css({width:Math.abs(self.wind_x)*360});
                         self.dom_wind_right.css({width:0});
                     }
                     else if( wind_x > 0 ){
-                        self.dom_wind_right.css({width:Math.abs(self.wind_x)*400});
+                        self.dom_wind_right.css({width:Math.abs(self.wind_x)*360});
                         self.dom_wind_left.css({width:0});
                     }
                     else
@@ -246,7 +301,7 @@
                         self.dom_wind_right.css({width:0});
                     }
 
-                    self.rotation += wind_x + jitter_x + balance_x + (rotation * 0.02);
+                    self.rotation += wind_x + jitter_x + balance_x + (rotation * 0.060);
 
                     if( self.rotation < -90 ){ self.rotation = -90 };
                     if( self.rotation > 90 ){ self.rotation = 90 };
@@ -255,6 +310,26 @@
                         self.rotation = 0;
                         self.restart();
                     }
+
+                    switch( self.dom_balance.attr('class') ){
+                        case 'balance':
+                            self.dom_balance.addClass('step_left');
+                            break;
+                        case 'balance step_left':
+                            self.dom_balance.removeClass('step_left').addClass('step_right');
+                            break;
+                        case 'balance step_right':
+                            self.dom_balance.removeClass('step_right');
+                            break;
+                    }
+
+                    self.dom_balance.css({
+                        bottom:134 + (Math.sin(ticks*1.5) * 3) + (Math.sin(ticks*5) * 10)
+                    })
+
+                    self.dom_bubble.css({
+                        top:240 - (Math.sin(ticks*5) * 10)
+                    })
 
                     var score_scale = self.score_angle - Math.abs(self.rotation);
 
@@ -300,8 +375,8 @@
             var events = events || {};
             events['joystick'] = function(my_slider){
 
-                //console.log(my_slider.position);
-                console.log(my_slider);
+                ////console.log(my_slider.position);
+                //console.log(my_slider);
 
                 var balance = my_slider.y - 0.5; // Convert 0 - 1 position into -0.5 - 0.5 delta
                 balance *= 2;                           // Convert -0.5 - 0.5 to -1 to 1 delta
@@ -316,7 +391,7 @@
                 }
                 if( ticks % 120 == 0 ){
                     wind_x = randomf(-0.5,0.5); // Big nasty wind forces!
-                    console.log('Wind',wind_x);
+                    //console.log('Wind',wind_x);
                     if( wind_x < 0 ){
                         $('.wind.left').css({
                             width:Math.abs(wind_x)*400
