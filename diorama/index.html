@@ -23,6 +23,76 @@
                 border-radius:10px;
                 line-height:50px;
             }
+
+                        .lights {
+                display:block;
+                width:710px;
+                height:100px;
+                background:#DBB100;
+                border-radius:20px;
+                margin:0 auto;
+                position:relative;
+            }
+
+            .lights ul:before {
+                content: '';
+                display:block;
+                position:absolute;
+                width:50px;
+                height:80px;
+                background:#DDD;
+                left:-10px;
+                top:10px;
+            }
+
+            .lights:before, .lights:after {
+                content: '';
+                display:block;
+                background:#000;
+                width:30px;
+                height:30px;
+                border-radius:50%;
+                position:absolute;
+                top:50%;
+                margin-top:-30px;
+                margin-left:-30px;
+                left:160px;
+                border:15px solid #E1B909;
+            } 
+            .lights:after {
+                left:580px;
+            }
+
+            .lights li, .lights ul {
+                list-style:none;
+                margin:0;
+                padding:0;
+            }
+
+            .lights li {
+                width:60px;
+                height:60px;
+                display:block;
+                background:#FFFFFF;
+                margin-left:80px;
+                margin-top:20px;
+                float:left;
+            }
+
+            .lights li:nth-child(1){
+                margin-left:60px;
+            }
+
+            .lights li span {
+                width:50px;
+                height:50px;
+                display:block;
+                border-radius:50%;
+                background:#EEE;
+                margin-left:5px;
+                margin-top:5px;
+            }
+            
         </style>
     </head>
     <body>
@@ -36,12 +106,20 @@
                         <li class="pressure"></li>
                         <li class="light"></li>
                     </ul>
+                    <div class="lights">
+                        <ul>   
+                            <li><span></span></li>
+                            <li><span></span></li>
+                            <li><span></span></li>
+                            <li><span></span></li>
+                            <li><span></span></li>
+                        </ul>
+                    </div>
                     <div class="diorama"></div>
                 </div>
                 <div class="modules icon-palette">
                     <header><h1>Modules</h1></header>
                 </div>
-            </div>
         </div>
 
         <div style="display:none;" class="palettes"></div>
@@ -68,6 +146,53 @@
 
         <script>
             "use strict";
+
+            function updateVirtualRainbow(buf){
+                if(buf.length == 3){
+
+                    var r = buf[0];
+                    var g = buf[1];
+                    var b = buf[2];
+
+                    $('.lights li span').css({
+                        background:'rgb(' + [r,g,b].join(',') + ')',
+                        'box-shadow': '0px 0px 30px rgba(' + [r,g,b].join(',') + ', 0.4)'
+                    })
+
+                    if(r == 0 && g == 0 && b == 0){
+                       $('.lights li span').css({
+                            background:'#EEEEEE',
+                            'box-shadow': 'none'
+                        })
+                    }
+
+                }
+                else if(buf.length == 15){
+
+                    for(var x = 0; x < 15; x+=3){
+                        var l = Math.round(x / 3);
+
+                        var r = buf[x];
+                        var g = buf[x+1];
+                        var b = buf[x+2];
+
+                        $('.lights li:eq(' + l + ') span').css({
+                            background:'rgb(' + [r,g,b].join(',') + ')',
+                            'box-shadow': '0px 0px 30px rgba(' + [r,g,b].join(',') + ', 0.4)'
+                        })
+
+                        if(r == 0 && g == 0 && b == 0){
+                           $('.lights li:eq(' + l + ') span').css({
+                                background:'#EEEEEE',
+                                'box-shadow': 'none'
+                            })
+                        }
+
+                    }
+
+                }
+            }
+
             var myApp = function(){
                 self.requires = ['light','weather','rainbow'];
                 self.running = null;
@@ -145,6 +270,8 @@
                             rainbow.sync();
                         }
                     }
+
+                    updateVirtualRainbow([rainbow.outputs.LED.data.r * 255, rainbow.outputs.LED.data.g * 255, rainbow.outputs.LED.data.b * 255]);
 
                 }
 
