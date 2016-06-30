@@ -109,21 +109,21 @@
         {'name':'orange', 'compare':function(r,g,b){
 
             if( similar(r,255,10) && similar(g,182,10) && similar(b,13,10) ){
-                console.log( 'Oraanngeeee! ' );
+                //console.log( 'Oraanngeeee! ' );
                 return true;
             }
             return false;
         }},
         {'name':'bannana','compare':function(r,g,b){
             if( similar(r,85,10) && similar(g,90,10) && similar(b,65,10) ){
-                console.log( 'Bannanananan! ' );
+                //console.log( 'Bannanananan! ' );
                 return true; // Kinda yellow?
             }
             return false;
         }},
         /*{'name':'apple', 'compare':function(r,g,b){
             if( similar(r,85,10) && similar(g,95,10) && similar(b,65,10) ){
-                console.log( 'Bannanananan! ' );
+                //console.log( 'Bannanananan! ' );
                 return true; // Kinda yellow?
             }
             return false;
@@ -206,103 +206,90 @@
         }
     }
 
+    var change_mode = function(new_mode){
+        console.log('New mode? ', new_mode);
+        if(modes[new_mode] != null){
+            mode = modes[new_mode];
+            mode_start = 0;
+        }
+
+    }
+
     var tick = function(){
-
-
         ticks++;
 
-        //console.log('mode', mode, modes['normal']);
+        // Entropy
+        if( ticks % 10 == 0 && random(0,1) ){
+
+            adjust_hunger(1);
+            adjust_happy(-1);
+
+        }
+
+        if( ticks % 5 == 0 ){
+            adjust_clean(-$('.poop:visible').length);
+
+            // Overweight, eek!
+            if( weight == max_stat ){
+                adjust_health(-1);
+            }
+
+            if( clean < 2 ) adjust_happy(-1);
+
+            if( hunger == max_stat ){
+                adjust_weight(-1);
+                adjust_happy(-1);
+            }
+        }
+
 
         switch( mode ){
             case modes['sick']:
-
-                    
-                    stroll();
-
                 set_mood('sick');
+                stroll();
+                    
                 if(health > max_stat/2){
                     mode_start = 0;
-                    mode = modes['normal'];
+                    change_mode('normal');
                 }
+
                 adjust_happy(-1);
 
                 break;
             case modes['sad']:
                 set_mood('sad');
-
                 stroll();
 
-                if(happy > 2) mode = modes['normal'];
+                if(happy > 2) change_mode('normal')
 
-                if( ticks % 10 == 0 && random(0,1) ){
-
-                    adjust_hunger(1);
-                    adjust_happy(-1);
-
-                }
                 break;
 
             case modes['normal']:
                 clear_mood();
                 stroll();
 
-                if( food && ticks % 2 ){
-                    feed();
-                }
-
                 var mode_switch = random(1,15);
-                //console.log('mode switch:',mode_switch);
+
                 switch( mode_switch ){
                     case 1:
                     case 2:
                     case 3:
                         if( hunger > 3 ){
-                            mode = modes['hungry'];
+                            change_mode('hungry');
                         }
                         break;
                     case 6:
                         if( hunger < 3 ){
-                            mode = modes['toilet'];
+                            change_mode('toilet');
                         }
                         break;
                 }
 
-                // Hunger and happiness entropy over time
-                if( ticks % 10 == 0 && random(0,1) ){
-
-                    adjust_hunger(1);
-                    adjust_happy(-1);
-
-                    if( $('.poop:visible').length ){
-                        adjust_clean(-$('.poop:visible').length);
-                    }
-
-                    // Overweight, eek!
-                    if( weight == max_stat ){
-                        adjust_health(-1);
-                    }
-
-                    if( clean < 2 ) adjust_happy(-1);
-
-                    if( health < 2 ) {
-                        mode = modes['sick'];
-                        mode_start = 0;
-                    }
-
-                }
-
-                if(happy < 2){
-                    mode = modes['sad'];
-                }
-
+                if(happy < 2) change_mode('sad');
+                if(health < 2) change_mode('sick');
 
                 break;
             case modes['toilet']:
-
-                /*if( poo ){
-                    mode = modes['normal'];
-                    break;
-                };*/
 
 
                 if( mode_start == 0 ){
@@ -337,8 +324,9 @@
 
                     //console.log('Poo size: ',Math.round(40 - ( 10 * (poo_x / pet_max_y) ) ) );
 
-                    var w = Math.round(60 - ( 30 * (poo_y / pet_max_y) ) )
-                    var h = Math.round(80 - ( 40 * (poo_y / pet_max_y) ) )
+                    var w = Math.round(60 - ( 30 * (poo_y / pet_max_y) ) );
+                    var h = Math.round(80 - ( 40 * (poo_y / pet_max_y) ) );
+
                     poop.css({
                         left:poo_x,
                         bottom:poo_y,
@@ -348,69 +336,26 @@
                     }).fadeIn(500);
 
 
-                    mode  = modes['normal'];
+                    change_mode('normal');
                     mode_start = 0;
 
                 }
 
                 break;
             case modes['hungry']:
+                stroll();
+                pet_y_dir = -1;
 
-                // Starving
-                if( hunger == max_stat ){
-                    adjust_weight(-1);
-                    adjust_happy(-1);
-                }
+                set_mood('hungry');
 
                 if( mode_start == 0 ){
                     mode_start = millis();
-                    // Setup this mode
-
                     
-                    stroll();
-
-                    pet_y_dir = -1;
-
-
                     wants_food = random(0,foods.length);
-                    //console.log('I WANT A ' + foods[wants_food].name);
 
-                    //console.log('HUNGRY!');
-
-                    set_mood('hungry');
                 }
 
-                if( pet_y > 10 ){
-                    pet_y_dir == 0;
-                }
-                //console.log('FEED ME!');
-
-                if(hunger < max_stat/2){
-                    mode = modes['normal'];
-                    mode_start = 0;
-                }
-                /*if( food != null ){
-                    mode = modes['normal'];
-                    adjust_hunger(-2);
-                    mode_start = 0;
-                    food = null
-                }*/
-
-                    // Successful feeding in this mode counts for 2 hunger instead of 1
-
-
-                if( millis() - mode_start > 30000 ){ // 30 seconds
-                    mode_start = 0;
-                    mode = modes['normal'];
-
-                    // Eep, we didn't feed the poor soul
-                    // Extra hunger ensues!
-                    adjust_hunger(1);
-                    adjust_happy(-1); // And he's sad :(
-
-                    clear_mood();
-                   // console.log('END HUNGRY!');
-                }
+                if(hunger < max_stat/2) change_mode('normal');
 
                 break;
         }
@@ -500,12 +445,15 @@
 
     var feed = function(selected_food){
 
+        //console.log('Om nom nom', selected_food, food);
+
         if(selected_food == food){
             adjust_hunger(-1);
             food = null;
         }
         else
         {
+                //console.log('SNACK!');
             adjust_happy(1);
         }
 
@@ -529,7 +477,7 @@
 
     var fn_sweep = function(slider_position){
 
-        console.log(slider_position);
+        //console.log(slider_position);
 
         var p = slider_position;
 
@@ -723,8 +671,7 @@
 
                 for(var f = 0; f < foods.length; f++){
                     if( foods[f].compare(r,g,b) ){
-                        food = foods[f].name;
-                        feed(food);
+                        feed(foods[f].name);
                         break;
                     }
 
