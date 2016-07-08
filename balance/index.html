@@ -164,6 +164,7 @@
                 self.requires = ['slider'];
                 self.running = null;
                 self.interval = null;
+                self._start_time = 0;
 
                 self.rotation  = 0;
                 self.balance_x = 0;
@@ -184,6 +185,7 @@
                 self.dom_balance = self.dom_stage.find('.balance');
                 self.dom_countdown = self.dom_stage.find('.countdown');
                 self.dom_bubble = self.dom_stage.find('.bubble');
+
 
                 self.run = function(){
 
@@ -266,6 +268,7 @@
                             return;
                         default:
                             self.dom_countdown.hide();
+                            self._start_time = ms;
                             self.step = 'run';
                             return;
                     }
@@ -275,7 +278,21 @@
 
                     var slider = self.slider.inputs.position.data.position;
 
-                    self.balance_x = (slider - 0.5) * 2; // Convert 0 - 1 position into -0.5 - 0.5 delta,
+                    var d = (ms - self._start_time);
+
+                    var wind_magnitude = ((d / 1000) % 60) / 60;
+
+                    wind_magnitude += d / (1000 * 300);
+
+                    if(wind_magnitude > 0.9) wind_magnitude = 0.9;
+
+                    //$('.wind-label').text(wind_magnitude);
+
+                    var balance_force = 1;
+
+                    //console.log(Math.sin(d / 10000),wind_magnitude);
+
+                    self.balance_x = (slider - 0.5) * (balance_force * 2); // Convert 0 - 1 position into -0.5 - 0.5 delta,
                                                          // Convert -0.5 - 0.5 to -1 to 1 delta
 
                     if( ticks % random(5,15) == 0 ){
@@ -283,7 +300,7 @@
                         ////console.log('Jitter',self.jitter_x);
                     }
                     if( random(100,300) % 17 == 0 ){
-                        self.wind_x = randomf(-0.5,0.5); // Big nasty wind forces!
+                        self.wind_x = randomf(-wind_magnitude,wind_magnitude); // Big nasty wind forces!
                         ////console.log('Wind',self.wind_x);
                     }
                     
@@ -301,7 +318,7 @@
                         self.dom_wind_right.css({width:0});
                     }
 
-                    self.rotation += wind_x + jitter_x + balance_x + (rotation * 0.060);
+                    self.rotation += wind_x + jitter_x + balance_x + (rotation * 0.05);
 
                     if( self.rotation < -90 ){ self.rotation = -90 };
                     if( self.rotation > 90 ){ self.rotation = 90 };
@@ -333,7 +350,9 @@
 
                     var score_scale = self.score_angle - Math.abs(self.rotation);
 
-                    self.score+=Math.floor(score_scale*0.1);
+                    if(score_scale < 0) score_scale = 0;
+
+                    self.score += Math.floor(score_scale*0.1);
 
                     self.dom_score.text(self.score);
 
