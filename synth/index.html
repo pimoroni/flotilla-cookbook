@@ -269,6 +269,7 @@
                 while(n--){Math.random()}
                 return Math.random();
             }
+
             var myApp = function(){
                 self.requires = ['slider','dial','light','touch','rainbow'];
                 self.running = null;
@@ -310,6 +311,7 @@
                 self.lastLight = 0;
                 self.minLight = 65535;
                 self.maxLight = 0;
+
                 self.scaleLight = function(light){
                     //console.log("light", light);
                     light =  Math.round(light / 20);
@@ -352,6 +354,9 @@
                     self.rainbow = rockpool.firstOfType('rainbow');
                     self.dial = rockpool.firstOfType('dial');
                     self.touch = rockpool.firstOfType('touch');
+
+
+                    $('.buttons li').filter(':eq(3)').find('span').text(self.bpm + 'bpm');
                     
                     self.interval = setInterval(self.mainLoop,Math.round(1000/(self.bpm/60)/10));
 
@@ -381,27 +386,88 @@
                     clearInterval(self.interval);
 
                 }
-                self.snapToScale = function(note){
+                self.snapToScale = function(note,scale){
                     var w = Math.floor(note);
                     var f = note - w;
-                    var r = w % 12;
-                    note = Math.floor(w/12) * 12;
-                    return note + f + self.closest([0, 2, 4, 7, 9], r);                   
+                    var r = w % 24;
+                    note = Math.floor(w/24) * 24;
+                    return note + f + self.closest(scale, r);                   
                 }
-                self.calculateNote = function(step, dial, slider, light){
-                    var key = 26;
-                    var num_steps = self.num_steps;
-                    key += Math.round(12*Math.randomNth(dial, step % num_steps));
-                    key += self.snapToScale(key);
+                self.getScale = function(dial){
 
-                    key = self.snapToScale(key);
+                    // Define our scales across two octaves
+                    var scales = [
+                        [0,2,4,5,7,9,11,12,14,16,17,19,21,23],
+                        [1,3,6,8,10,13,15,18,20],
+                        [0,2,5,7,8,9,12,14,17,19,20,21]
+                    ]
+
+                    // Select a scale based on the current position of the dial
+                    var scale = scales[Math.round(dial * (scales.length-1))];
+
+                    //console.log("Using scale:", scale, dial, scales.length);
+
+                    return scale;
+                }
+
+                self.calculateNote = function(step, dial, slider, light){
+                    var key = 48; // Middle C
+                    var num_steps = self.num_steps;
+                    console.log('Calculating note from ', dial);
+
+                    key += Math.round(24*Math.randomNth(dial*100, Math.round(dial*10) + (step % num_steps))); // Select one of 24 notes up from middle C, two octaves of range
+
+                    //key += self.snapToScale(key, scale);
+
+
+                    key = self.snapToScale(key, self.getScale(dial));
+
+
                     return key;
+
+/*
+                    var scales = [
+                        'aeolian',
+                        'blues',
+                        'chromatic',
+                        'dorian',
+                        'doubleharmonic',
+                        'harmonicminor',
+                        'ionian',
+                        'locrian',
+                        'lydian',
+                        'majorpentatonic',
+                        'melodicminor',
+                        'minorpentatonic',
+                        'mixolydian',
+                        'phrygian',
+                        'wholetone'
+                    ]
+
+                    var scale_name = scales[Math.round(dial * (scales.length-1))];
+
+                    var scale = teoria.note.fromKey(52).scale(scale_name).notes();
+
+                    var note = Math.round((scale.length-1) * Math.randomNth(dial*100, Math.round(dial*10) + (step % num_steps)));
+
+                    console.log(scale_name, scale);
+
+                    var key = scale[note].key();
+
+                    return scale[note].key();
+                    */
+
                 }
                 self.num_steps = 16;
-                self.bpm = 180;
+                self.current_bpm = [2]
+                self.bpm_choices = [60,96,120,180,200];
+                self.bpm = self.bpm_choices[self.current_bpm];
                 self.master_step = 0;
                 self.step = 0; // = self.master_step / 10
+                self.last_touch_four = 0;
                 self.drumLoop = function(step, dial, slider, light, rainbowBuf){
+                    if(slider < 0.1) {return rainbowBuf};
+
                     var num_steps = self.num_steps;
 
                     var s = step % num_steps; self.num_steps;
@@ -410,6 +476,7 @@
                     var phrase = Math.round(Math.randomNth(slider, step % (self.num_steps / 4))*3)  
 
                     //console.log("Drum Step: ", s, rand, phrase);
+
                     if(s == 0 && rand % 2){
                         CYM.bang();
                     }
@@ -480,31 +547,52 @@
 
                     if(touch_one){
                         self.synth.set({wave:"tri",mul:0.6});
-                        self.base.set({wave:"tri",mul:0.6});
+                        self.bass.set({wave:"tri",mul:0.6});
 
                         $('.buttons li').removeClass('on').filter(':eq(0)').addClass('on');
                     }
                     if(touch_two){
                         self.synth.set({wave:"saw",mul:0.3});
-                        self.base.set({wave:"sin",mul:0.3});
+                        self.bass.set({wave:"sin",mul:0.3});
 
                         $('.buttons li').removeClass('on').filter(':eq(1)').addClass('on');
                     }
                     if(touch_three){
                         self.synth.set({wave:"sin",mul:0.6});
-                        self.base.set({wave:"sin",mul:0.6});
+                        self.bass.set({wave:"sin",mul:0.6});
 
                         $('.buttons li').removeClass('on').filter(':eq(2)').addClass('on');
                     }
-                    if(touch_four){
-                        self.synth.set({wave:"noise",mul:0.6});
-                        $('.buttons li').removeClass('on').filter(':eq(3)').addClass('on');
+                    if(touch_four && touch_four != self.last_touch_four){
+
+                        self.current_bpm ++;
+                        self.current_bpm %= self.bpm_choices.length;
+                        self.bpm = self.bpm_choices[self.current_bpm];
+
+                        $('.buttons li').filter(':eq(3)').find('span').text(self.bpm + 'bpm');
+
+                        clearInterval(self.interval);
+
+                        self.interval = setInterval(self.mainLoop,Math.round(1000/(self.bpm/60)/10));
+
+                        //self.synth.set({wave:"noise",mul:0.6});
+                        //$('.buttons li').removeClass('on').filter(':eq(3)').addClass('on');
+
                     }
+                        self.last_touch_four = touch_four;
+
+                        
+                    var slider = self.slider.inputs.position.data.position;
+                    var dial = self.dial.inputs.position.data.position;
 
                     var light = self.scaleLight(self.light.inputs.visible.data.vis); 
 
                     if(light > 0){
-                        self.d_beam.noteOn(self.snapToScale(90 - (light%60)), 100);
+                        var dnote = 72 + (light % 24);
+                        dnote = self.snapToScale(dnote, self.getScale(dial));
+
+                        self.d_beam.noteOn(dnote, 100);
+                        //self.d_beam.noteOn(self.snapToScale(90 - (light%60)), 100);
                     }   
 
                     /*if( light > 0 ){
@@ -527,10 +615,6 @@
 
                     //self.gate.selected = (Math.round(self.master_step/3) % 2);
                     if(self.master_step % 10 == 0){
-                        
-                        var slider = self.slider.inputs.position.data.position;
-                        var dial = self.dial.inputs.position.data.position;
-
                         
                         self.step = Math.floor(self.master_step / 10);
                         //var step = self.step;
@@ -574,26 +658,26 @@
                             self.lastNote = 0;
                         }
                         if(slider > 0 && self.note_history.length == self.history_length){
-                            //self.base.set({freq:teoria.note.fromKey(self.snapToScale(10+Math.round(((Math.round(self.step/4))%8) + (slider*10)))).fq()});
+                            //self.bass.set({freq:teoria.note.fromKey(self.snapToScale(10+Math.round(((Math.round(self.step/4))%8) + (slider*10)))).fq()});
 
                             var base_note = 0;
                             for(var x = 0; x < self.history_length; x++){
                                 base_note += self.note_history[x];
                             }
                             base_note = Math.round(base_note / self.history_length);
-                            base_note = self.snapToScale(base_note - 12 - 12);
+                            base_note = self.snapToScale(base_note - 24, self.getScale(dial));
                             
 
-                            self.base.noteOn(base_note, 100);
-                            //self.base.set({freq:teoria.note.fromKey(self.snapToScale(base_note)).fq()});
+                            self.bass.noteOn(base_note, 100);
+                            //self.bass.set({freq:teoria.note.fromKey(self.snapToScale(base_note)).fq()});
 
-                            //self.base.play();
+                            //self.bass.play();
                             //self.gate_1.play();
                             //self.gate_2.play();
                         }
                         else
                         {
-                            //self.base.pause();
+                            //self.bass.pause();
                             //self.gate_1.pause();
                             //self.gate_2.pause();
                         }
@@ -606,9 +690,9 @@
                     }
                 }
                 self.lastNote = 0;
-                self.base_env  = T("adsr", {a:5,d:300,s:0,r:1600});
-                self.base = T("OscGen", {wave: "tri", mul:0.5, env:self.base_env}).play();
-                //self.gate = T("gate", self.base);
+                self.bass_env  = T("adsr", {a:5,d:500,s:0,r:3000});
+                self.bass = T("OscGen", {wave: "tri", mul:0.5, env:self.bass_env}).play();
+                //self.gate = T("gate", self.bass);
                 //self.gate_1 = T("dist" , {pre:32, post:-20, mul:0.3}, self.gate.at(0));
                 //self.gate_2 = T("dist" , {pre:10, post:-10, mul:0.3}, self.gate.at(1));
 
