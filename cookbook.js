@@ -1,4 +1,5 @@
 var rockpool = rockpool || {};
+var cookbook = cookbook || {};
 
 function random(min,max){
    return Math.floor(Math.random()*(max-min+1)+min);
@@ -115,6 +116,89 @@ rockpool.nthOfType = function(module_type, n){
             }
         }
     }
+    return null;
+
+}
+
+/* 
+
+Cookbook wrappers abstract away the structural complexity of Rockpool's API
+and provide a clean, consistent object with methods for getting/setting values.
+
+*/
+cookbook.wrappers = {
+    'rainbow': function(module){
+
+        this.buf = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+
+        this.clear = function(){
+
+            this.set_all(0,0,0);
+
+        }
+
+        this.set_all = function(r, g, b){
+
+            /*module.outputs.LED.data.r = r;
+            module.outputs.LED.data.g = g;
+            module.outputs.LED.data.b = b;
+            module.sync();*/
+
+            this.set_pixel(0, r, g, b);
+            this.set_pixel(1, r, g, b);
+            this.set_pixel(2, r, g, b);
+            this.set_pixel(3, r, g, b);
+            this.set_pixel(4, r, g, b);
+
+        }
+
+        this.set_pixel = function(i, r, g, b){
+
+            if(i >= 0 && i < 5){
+                i = i*3;
+                this.buf[i] = r;
+                this.buf[i+1] = g;
+                this.buf[i+2] = b;
+            }
+
+        }
+
+        this.show = function(){
+
+            rockpool.sendHostUpdate(module.host, module.channel + 1, module.code, this.buf);
+
+        }
+
+    },
+    'motor': function(module){
+
+        this.speed = function(speed){
+            module.outputs.speed.data.speed = Math.round(speed);
+            module.sync();
+        }
+
+        return this;
+
+    },
+    'light': function(module){
+
+        this.light = function(){
+            return module.inputs.visible.data.vis;
+        }
+
+        return this;
+
+    }
+}
+
+cookbook.nthOfType = function(module_type, n){
+
+    var module = rockpool.nthOfType(module_type, n);
+
+    if( module != null && cookbook.wrappers[module_type] ){
+        return new cookbook.wrappers[module_type](module);
+    }
+
     return null;
 
 }
