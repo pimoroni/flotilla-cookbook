@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Rockpool - Cookbook</title>
+        <link rel="stylesheet" href="http://flotil.la/rockpool/css/jquery.fancybox.min.css">
+        <link rel="stylesheet" href="http://flotil.la/rockpool/css/pure-min.css">
+        <link rel="stylesheet" href="http://flotil.la/rockpool/css/rockpool.css">
+        <link rel="stylesheet" href="../cookbook.css">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="viewport" content="width = device-width, user-scalable = no, initial-scale = 1.0">
+
+        <style type="text/css">
+            .stage {
+                margin:0 auto;
+                position:relative;
+                width:600px;
+                height:400px;
+            }
+            .light_l, .light_r {
+                width:100px;
+                height:100px;
+                border-radius:50%;
+                background:rgba(255, 255, 255, 0);
+                border:10px solid #000;
+                position:absolute;
+                top:10;
+                left:10px;
+                line-height:100px;
+                text-align:center;
+            }
+            .light_r {
+                left:auto;
+                right:10px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="main">
+            <div class="app">
+                <header><h1>Line Follower</h1></header>
+                <div class="stage">
+                    <div class="light_l"></div>
+                    <div class="light_r"></div>
+                </div>
+                <div class="modules icon-palette">
+                    <header><h1>Modules</h1></header>
+                </div>
+            </div>
+        </div>
+
+        <div style="display:none;" class="palettes"></div>
+
+        <script src="http://flotil.la/rockpool/js/lib/jquery-2.1.1.min.js"></script>
+        <script src="http://flotil.la/rockpool/js/lib/fastclick.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.languify.js"></script>
+        <script src="http://flotil.la/rockpool/js/socket.io.min.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.widget.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.rule.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.inputs.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.outputs.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.converters.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.palette.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.module.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.modules.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.client.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.save.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.find-hosts.worker.js"></script>
+        <script src="../cookbook.js"></script>
+
+        <script src="http://flotil.la/rockpool/js/lib/jquery.fancybox.min.js"></script>
+
+        <script type="text/javascript">
+
+            "use strict";
+
+            var myApp = function(){
+                self.requires = ['motor:2','light:2','rainbow'];
+                self.running = null;
+                self.interval = null;
+                self._start_time = 0;
+
+                self.dom_stage = $('.stage');
+                self.dom_light_l = $('.light_l');
+                self.dom_light_r = $('.light_r');
+
+                self.motor_l = null;
+                self.motor_r = null;
+
+                self.light_l = null;
+                self.light_r = null;
+
+                self.rainbow = null;
+
+                self.run = function(){
+
+                    if(self.running) return false;
+                    self.running = true;
+
+                    self._start_time = millis();
+                    
+
+                    self.motor_l = cookbook.nthOfType('motor',0);
+                    self.motor_r = cookbook.nthOfType('motor',1);
+
+                    self.light_l = cookbook.nthOfType('light',0);
+                    self.light_r = cookbook.nthOfType('light',1);
+
+                    self.rainbow = cookbook.nthOfType('rainbow',0);
+
+
+                    self.interval = setInterval(self.mainLoop,50);
+
+                    $(window).on('beforeunload',function(){
+                        self.motor_l.speed(0);
+                        self.motor_r.speed(0);
+                        self.rainbow.clear();
+                        self.rainbow.show();
+                    });
+
+                }
+
+                self.stop = function(){
+
+                    self.running = false;
+                    clearInterval(self.interval);
+
+                }
+
+                self.mainLoop = function(){
+
+                    var t = millis();
+                    var d = t - self._start_time;
+                    var s = (Math.sin(d/100) + 1) / 2;
+
+                    self.motor_l.speed(0);
+                    self.motor_r.speed(0);
+
+                    self.rainbow.clear();
+                    self.rainbow.set_pixel(Math.round(4 * s),255,0,0);
+                    self.rainbow.show();
+                    //console.log("Running...", d);
+
+                    //console.log(self.light_l.light(), self.light_r.light());
+
+                    var level_l = self.light_l.light() / 500.0;
+                    var level_r = self.light_r.light() / 500.0;
+
+                    if(level_l > 1.0) level_l = 1.0;
+                    if(level_r > 1.0) level_r = 1.0;
+
+                    self.dom_light_l.css('background','rgba(255,255,255,' + level_l + ')').text(level_l);
+                    self.dom_light_r.css('background','rgba(255,255,255,' + level_r + ')').text(level_r);
+
+                }
+
+                return self;
+            }
+
+            rockpool.runCookbookApp(myApp());
+        </script>
+
+    </div>
+    </body>
+</html>
