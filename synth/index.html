@@ -26,12 +26,12 @@
             .buttons li {
                 display:inline-block;
                 background:#FFFFFF;
-                width:80px;
-                height:50px;
-                border-radius:10px;
+                width:120px;
+                height:75px;
+                border-radius:15px;
                 font-size:40px;
                 font-weight:bold;
-                line-height:50px;
+                line-height:75px;
             }
             .buttons li span {
                 display:block;
@@ -41,10 +41,10 @@
                 line-height:30px;
             }
             .buttons li:nth-child(1){
-                border-bottom-left-radius:20px;
+                border-bottom-left-radius:30px;
             }
             .buttons li:nth-child(4){
-                border-bottom-right-radius:20px;
+                border-bottom-right-radius:30px;
             }
             .buttons li.active {
                 box-shadow:0px 0px 15px #FFF;
@@ -167,9 +167,9 @@
                         </ul>
                     </div>
                     <ul class="buttons">
-                        <li class="on">1<span>Tri</span></li>
-                        <li>2<span>Saw</span></li>
-                        <li>3<span>Sin</span></li>
+                        <li>1<span>&nbsp;</span></li>
+                        <li>2<span>&nbsp;</span></li>
+                        <li>3<span>&nbsp;</span></li>
                         <li>4<span>&nbsp;</span></li>
                     </ul>
                 </div>
@@ -288,37 +288,28 @@
                 self.output_history_length = 16;
 
                 self.scales = [
-                        'aeolian',
                         'blues',
+                        'aeolian',
                         'chromatic',
                         'dorian',
-                        'doubleharmonic',
-                        'harmonicminor',
                         'ionian',
                         'locrian',
                         'lydian',
-                        'majorpentatonic',
-                        'melodicminor',
-                        'minorpentatonic',
-                        'mixolydian',
                         'phrygian',
-                        'wholetone'
+                        'wholetone',
+                        'mixolydian',
+                        'melodicminor',
+                        'harmonicminor',
+                        'doubleharmonic',
+                        'majorpentatonic',
+                        'minorpentatonic'
                     ];
 
                 self.current_scale = 0;
 
-                self.chords = [
-                    'min',
-                    'min7',
-                    'min9',
-                    'maj',
-                    'maj7',
-                    'maj9'
-                ]
-
-                self.current_chord = 0;
-
                 self.patterns = [
+                    [1, 5, 8],
+                    [1, 5, 8, 11],
                     [1,2,4,2],
                     [1,2,3,4],
                     [0,1,3,5],
@@ -394,7 +385,8 @@
 
                     $('.buttons li').filter(':eq(3)').find('span').text(self.bpm + 'bpm');
                     $('.buttons li').filter(':eq(2)').find('span').text(self.scales[self.current_scale]);
-                    $('.buttons li').filter(':eq(1)').find('span').text(self.current_pattern);
+                    $('.buttons li').filter(':eq(1)').find('span').text((self.current_pattern + 1) + ' of ' + self.patterns.length);
+                    $('.buttons li').filter(':eq(0)').find('span').text('tri');
                     
                     self.interval = setInterval(self.mainLoop,Math.round(1000/(self.bpm/60)/4));
 
@@ -431,47 +423,21 @@
                     note = Math.floor(w/24) * 24;
                     return note + f + self.closest(scale, r);                   
                 }
-                self.getScale = function(dial){
-
-                    // Define our scales across two octaves
-                    var scales = [
-                        [0,2,4,5,7,9,11,12,14,16,17,19,21,23],
-                        [1,3,6,8,10,13,15,18,20],
-                        [0,2,5,7,8,9,12,14,17,19,20,21]
-                    ]
-
-                    var scale = scales[Math.round(dial * (scales.length-1))];
-
-                    return scale;
-                }
-
                 self.calculateLightNote = function(step, dial, light){
 
                     var scale_name = self.scales[self.current_scale];
-                    var chord_name = self.chords[self.current_chord];
 
                     var octave = Math.round(light / 12);
 
-                    //console.log(light, octave);
+                    var offset = (light % 12) / 12;
 
-                    var offset = dial / 1.0;
-
-                    var scale = teoria.note.fromKey(72).scale(scale_name);
+                    var scale = teoria.note.fromKey(84).scale(scale_name);
 
                     var root_notes = scale.notes();
 
                     var root_note = root_notes[Math.round((root_notes.length - 1) * offset)];
 
-
-                    var chord_notes = root_note.chord(chord_name).notes();
-
-
-                    var note_position = Math.round(light % chord_notes.length);
-
-                    var chord_note = chord_notes[note_position];
-
-
-                    var key = chord_note.key();
+                    var key = root_note.key();
 
                     return key;
 
@@ -482,7 +448,6 @@
                     if( dial < 0.01 ) return -1;
 
                     var scale_name = self.scales[self.current_scale];
-                    var chord_name = self.chords[self.current_chord];
 
                     var offset = dial / 1.0;
 
@@ -500,14 +465,11 @@
 
                 }
 
-
                 self.calculateBassNote = function(step, dial){
 
                     var scale_name = self.scales[self.current_scale];
-                    var chord_name = self.chords[self.current_chord];
 
                     var offset = dial / 1.0;
-
 
                     var scale = teoria.note.fromKey(36).scale(scale_name);
 
@@ -529,10 +491,7 @@
                     var rand = Math.round(Math.randomNth(slider, step % self.num_steps)*10);
                     var phrase = Math.round(Math.randomNth(slider, step % (self.num_steps / 4))*3) ;
 
-
-                    if(s == 0 && rand % 2){
-                        CYM.bang();
-                    }
+                    if(s == 0 && rand % 2) CYM.bang();
                     
                     if(phrase==1){
                         if(s % 4 == 0){
@@ -548,19 +507,14 @@
 
                             rainbowBuf[ 5 + ((step % num_steps % 4)*3) ] = 128; 
                         }
-                        if(s % 4 == 3){
-                            HH1.bang();
-                        }
+                        if(s % 4 == 3) HH1.bang();
                     }
                     else if(phrase==2){
                         
-                        if(s % 4 == 1){
-                            HH2.bang();
-                        }
+                        if(s % 4 == 1) HH2.bang();
                     }
                     else
                     {
-
                         // Double BD drum phrase
                         if( s % 8 == 0 | s % 8 == 1 | s % 8 == 4){
                             BD.bang();
@@ -572,12 +526,8 @@
 
                             rainbowBuf[ 5 + ((step % num_steps % 4)*3) ] = 128; 
                         }
-                        if(s % 2 == 1){
-                            HH2.bang();
-                        }
-                        if(s % 4 == 3){
-                            HH1.bang();
-                        }
+                        if(s % 2 == 1) HH2.bang();
+                        if(s % 4 == 3) HH1.bang();
                     }
 
                     return rainbowBuf;
@@ -586,10 +536,10 @@
                 self.mainLoop = function(){
                     self.master_step++;
     
-                    var touch_one = touch.inputs.button.data[1] > 0;
-                    var touch_two = touch.inputs.button.data[2] > 0;
+                    var touch_one   = touch.inputs.button.data[1] > 0;
+                    var touch_two   = touch.inputs.button.data[2] > 0;
                     var touch_three = touch.inputs.button.data[3] > 0;
-                    var touch_four = touch.inputs.button.data[4] > 0;
+                    var touch_four  = touch.inputs.button.data[4] > 0;
 
                     $('.buttons li:eq(0)').toggleClass('active', touch_one);
                     $('.buttons li:eq(1)').toggleClass('active', touch_two);
@@ -600,7 +550,6 @@
                         self.current_tone += 1;
                         self.current_tone %= 3;
 
-                        //console.log("Tone:", self.current_tone);
 
                         switch(self.current_tone){
                             case 0:
@@ -624,7 +573,7 @@
                     if(touch_two && touch_two != self.last_touch_two){ // Change Scale
                         self.current_pattern++;
                         self.current_pattern%=self.patterns.length;
-                        $('.buttons li').filter(':eq(1)').find('span').text(self.current_pattern);
+                        $('.buttons li').filter(':eq(1)').find('span').text((self.current_pattern + 1) + ' of ' + self.patterns.length);
                     }
 
 
@@ -660,9 +609,6 @@
                     var light = self.scaleLight(self.light.inputs.visible.data.vis); 
 
                     if(light > 0){
-
-                        //var dnote = 72 + (light % 24);
-                        //dnote = self.snapToScale(dnote, self.getScale(dial));
 
                         var dnote = calculateLightNote(step, dial, light);
 
@@ -703,13 +649,6 @@
                             self.lastNote = 0;
                         }
                         if(slider > 0 && self.note_history.length == self.history_length){
-
-                            /*var base_note = 0;
-                            for(var x = 0; x < self.history_length; x++){
-                                base_note += self.note_history[x];
-                            }
-                            base_note = Math.round(base_note / self.history_length);
-                            base_note = self.snapToScale(base_note - 24, self.getScale(dial));*/
                             
                             var bass_note = self.calculateBassNote(step, dial);
 
@@ -726,6 +665,7 @@
                         updateVirtualRainbow(rainbowBuf);
                     }
                 }
+
                 self.lastNote = 0;
                 self.bass_env  = T("adsr", {a:10,d:300,s:0,r:1000});
                 self.bass = T("OscGen", {wave: "tri", mul:0.5, env:self.bass_env}).play();
@@ -737,6 +677,7 @@
 
                 self.d_beam = T("OscGen", {wave:"tri", mul:0.6, env:self.env});
                 self.d_reverb = T("reverb", {room:0.9, damp:0.2, mix:0.45}, self.d_beam).play();
+
                 return self;
                 
             }
