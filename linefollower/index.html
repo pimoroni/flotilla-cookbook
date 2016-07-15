@@ -137,21 +137,38 @@
                     self.motor_l.speed(0);
                     self.motor_r.speed(0);
 
-                    self.rainbow.clear();
+
+                    /*self.rainbow.clear();
                     self.rainbow.set_pixel(Math.round(4 * s),255,0,0);
-                    self.rainbow.show();
+                    self.rainbow.show();*/
+
                     //console.log("Running...", d);
 
-                    //console.log(self.light_l.light(), self.light_r.light());
+                    console.log(self.light_l.light(), self.light_r.light());
 
-                    var level_l = self.light_l.light() / 500.0;
-                    var level_r = self.light_r.light() / 500.0;
+                    self.rainbow.set_all(0, 0, 255);
+                    self.rainbow.show();
+
+
+                    var level_l = self.light_l.light() / 1400.0;
+                    var level_r = self.light_r.light() / 1400.0;
 
                     if(level_l > 1.0) level_l = 1.0;
                     if(level_r > 1.0) level_r = 1.0;
 
                     self.dom_light_l.css('background','rgba(255,255,255,' + level_l + ')').text(level_l);
                     self.dom_light_r.css('background','rgba(255,255,255,' + level_r + ')').text(level_r);
+
+                    self.motor_l.speed(0);
+                    self.motor_r.speed(0);
+
+                    if(level_l  > 0.75){
+                            self.motor_l.speed(30);
+                    }
+
+                    if(level_r  > 0.75){
+                            self.motor_r.speed(-30);
+                    }
 
                 }
 
