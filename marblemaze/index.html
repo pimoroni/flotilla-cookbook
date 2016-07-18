@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>Rockpool - Cookbook</title>
+        <title>Marble Maze - Flotilla Cookbook</title>
+        <link href='https://fonts.googleapis.com/css?family=Roboto' rel='stylesheet' type='text/css'>
         <link rel="stylesheet" href="http://flotil.la/rockpool/css/jquery.fancybox.min.css">
         <link rel="stylesheet" href="http://flotil.la/rockpool/css/pure-min.css">
         <link rel="stylesheet" href="http://flotil.la/rockpool/css/rockpool.css">
@@ -18,23 +19,57 @@
                 height:400px;
             }
 
+            .maze-container {
+                margin:0 auto;
+                border:10px solid #000;
+                width: 400px;
+                border-radius: 10px;
+                padding:10px;
+                background:#0b4400;
+            }
+
             .maze {
                 width:400px;
                 height:400px;
+                position:relative;
             }
 
             .maze .cell, .maze .player, .maze .goal {
                 position: absolute;
                 display: block;
-                border-radius:10%;
+                border-radius:25%;
+                width:50px;
+                height:50px;
             }
 
+            .maze .cell {
+            }
+            .maze .cell.wall {
+                background:#6c8b6b;
+                border:5px solid #b7d9b6;
+                border-bottom-color:#004600;
+                border-right-color:#46673a;
+
+                width:40px;
+                height:40px;
+
+                box-shadow:5px 5px 0px rgba(0,0,0,0.2);
+            }
+
+
             .maze .player {
-                background: #CC0000;
+                background: #26249f;
+                /* Permalink - use to edit and share this gradient: http://colorzilla.com/gradient-editor/#9397fb+0,26249f+100 */
+background: #9397fb; /* Old browsers */
+background: -moz-radial-gradient(20px 20px, ellipse cover,  #9397fb 0%, #26249f 100%); /* FF3.6-15 */
+background: -webkit-radial-gradient(20px 20px, ellipse cover,  #9397fb 0%,#26249f 100%); /* Chrome10-25,Safari5.1-6 */
+background: radial-gradient(ellipse at 20px 20px,  #9397fb 0%,#26249f 100%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
+filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#9397fb', endColorstr='#26249f',GradientType=1 ); /* IE6-9 fallback on horizontal gradient */
+                box-shadow: 4px 4px 6px rgba(0,0,0,0.3)
             }
 
             .maze .goal {
-                background: #00CC00;
+                background: #210a1a;
             }
 
             .maze .player, .maze .goal {
@@ -44,9 +79,19 @@
         </style>
     </head>
     <body>
+    <body>
         <div class="main">
-            <div class="stage">
-                <div class="maze"></div>
+            <div style="margin: 0px auto;width:100%;">
+                <div class="app">
+                    <header><h1>Marble Maze</h1></header>
+
+                    <div class="maze-container"><div class="maze"></div></div>
+
+                </div>
+                <div class="modules icon-palette">
+                    <header><h1>Let's Get The Ball Rolling</h1></header>
+                    <p>Before you begin, you're going to need something to display your maze, and a tilt sensor to control your ball. Connect a matrix and a motion module:</p>
+                </div>
             </div>
         </div>
 
@@ -88,7 +133,7 @@
                 self.motion = null;
 
                 self.levels = [
-                           [[0,0,0,1,0,1,0,1],
+                           [[0,0,0,1,0,1,1,0],
                             [1,1,0,1,0,0,0,0],
                             [0,0,0,1,0,1,1,0],
                             [0,1,1,1,0,1,0,0],
@@ -176,8 +221,6 @@
                             for(y = 0; y < 8; y++){
                                 $('<div>')
                                 .css({
-                                    width: self.cell_w,
-                                    height: self.cell_h,
                                     left: x*self.cell_w,
                                     top: y*self.cell_h
                                 })
@@ -192,15 +235,11 @@
 
                             var cell = $('.maze .cell').filter(':eq(' + ((x*8) + y) + ')');
                             if(self.maze[y][x] == 1){
-                                cell.css({
-                                    'background-color': '#000000'
-                                }).data('wall',1);
+                                cell.addClass('wall').data('wall',1);
                             }
                             else
                             {
-                                cell.css({
-                                    'background-color': 'transparent'
-                                }).data('wall',0);
+                                cell.removeClass('wall').data('wall',0);
                             }
 
                         }
@@ -235,18 +274,18 @@
                     for(x = 0; x < 8; x++){
                         image[x] = 0;
                         for(y = 0; y < 8; y++){
-                            image[x] += maze[y][x] << (7-y);
-                            if(self.marble.x == x && self.marble.y == y){
+                            image[x] += maze[y][7-x] << (y);
+                            if(self.marble.x == (7-x) && self.marble.y == y){
                                 if(self.elapsed_ms < 2000){
-                                    image[x] += ((self.ms/200) % 2) << (7-y);
+                                    image[x] += ((self.ms/200) % 2) << (y);
                                 }
                                 else
                                 {
-                                    image[x] += 1 << (7-y);
+                                    image[x] += 1 << (y);
                                 }
                             }
-                            if(self.goal.x == x && self.goal.y == y){
-                                image[x] += ((self.ms/500) % 2) << (7-y);
+                            if(self.goal.x == (7-x) && self.goal.y == y){
+                                image[x] += ((self.ms/500) % 2) << (y);
                             }
                         }
                     }

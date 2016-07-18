@@ -1,4 +1,8 @@
 
+body {
+
+    font-family:Roboto, Sans-Serif;
+}
 header h1 {
     color:#FFF;
     text-align: center;
@@ -52,8 +56,17 @@ header h1 {
     background:#CC0000;
 }
 .modules {
-    text-align:center;
-    padding-bottom:50px;
+    text-align: center;
+    padding-bottom: 50px;
+    display: block;
+    margin: 0 auto;
+    border: 10px solid #ED1558;
+    background: rgb(69, 6, 25);
+    margin: 20px;
+    border-radius: 20px; 
+       max-width: 760px;
+    margin: 0 auto;
+    margin-top: 50px;
 }
 .modules div {
     margin-left:10px;
@@ -63,11 +76,15 @@ header h1 {
     width:80px;
     height:80px;
     text-align: center;
-    font-family: FreeSans,Arimo,"Droid Sans",Helvetica,Arial,sans-serif;
+    font-family: Roboto;
 }
 .modules div img {
     max-width:100%;
     height:auto;
+}
+.modules p {
+    color:#FFFFFF;
+    padding:0 20px 20px 20px;
 }
 .modules div:nth-child(1){
     margin-left:0px;
@@ -104,3 +121,76 @@ header h1 {
 .icon-palette i.icon-rainbow, .icon-palette i.icon-dial, .icon-palette i.icon-slider {
     background-color:#DBB100;
 }
+
+.modules div.missing i {
+        background:rgba(100,100,100,0.5);
+}
+
+            .virtualrainbow {
+                display:block;
+                width:710px;
+                height:100px;
+                background:#DBB100;
+                border-radius:20px;
+                margin:0 auto;
+                position:relative;
+            }
+
+            .virtualrainbow ul:before {
+                content: '';
+                display:block;
+                position:absolute;
+                width:50px;
+                height:80px;
+                background:#DDD;
+                left:-10px;
+                top:10px;
+            }
+
+            .virtualrainbow:before, .virtualrainbow:after {
+                content: '';
+                display:block;
+                background:#000;
+                width:30px;
+                height:30px;
+                border-radius:50%;
+                position:absolute;
+                top:50%;
+                margin-top:-30px;
+                margin-left:-30px;
+                left:160px;
+                border:15px solid #E1B909;
+            } 
+            .virtualrainbow:after {
+                left:580px;
+            }
+
+            .virtualrainbow li, .virtualrainbow ul {
+                list-style:none;
+                margin:0;
+                padding:0;
+            }
+
+            .virtualrainbow li {
+                width:60px;
+                height:60px;
+                display:block;
+                background:#FFFFFF;
+                margin-left:80px;
+                margin-top:20px;
+                float:left;
+            }
+
+            .virtualrainbow li:nth-child(1){
+                margin-left:60px;
+            }
+
+            .virtualrainbow li span {
+                width:50px;
+                height:50px;
+                display:block;
+                border-radius:50%;
+                background:#EEE;
+                margin-left:5px;
+                margin-top:5px;
+            }

@@ -222,14 +222,20 @@ rockpool.runCookbookApp = function(my_app){
         }
 
     }
+    rockpool.on_connect = function(){
+
+        setTimeout(function(){rockpool.cookbookCheckModulesAvailable(my_app.requires);},100);
+
+    }
     $(function () {rockpool.initialize()});
+
 }
 
 rockpool.updateAvailableCookbookModules = function() {
     rockpool.available_modules = [];
 
     for( k in rockpool.active_modules ){
-        var div = $('.modules').find('.' + k);
+       // var div = $('.modules').find('.' + k);
 
         //console.log(k);
 
@@ -241,26 +247,29 @@ rockpool.updateAvailableCookbookModules = function() {
 
             rockpool.available_modules.push(module);
 
-            if( div.length == 0 ){
+            /*if( div.length == 0 ){
                 div = $('<div>').addClass(k)
                 $('<i>').addClass('icon-' + module).appendTo(div);
                 $('<strong>').text(module).appendTo(div);
                 $('<span>').text(rockpool.channelToLabel(channel)).appendTo(div);
                 div.appendTo('.modules');
-            }
+            }*/
 
         }
-        else
+        /*else
         {
             if( div.length != 0 ){
                 div.remove();
             }
-        }
+        }*/
     }
 }
 
 rockpool.cookbookCheckModulesAvailable = function(modules) {
+    var status = true;
+
     for(module_index in modules){
+        var available = 0;
         var module_name = modules[module_index];
         var count = 1;
         if(module_name.indexOf(":") > -1){
@@ -268,13 +277,43 @@ rockpool.cookbookCheckModulesAvailable = function(modules) {
             module_name = req[0];
             count = parseInt(req[1]);
         }
-        if( rockpool.available_modules.filter(function(value){return value === module_name;}).length < count ){
+
+        available = rockpool.available_modules.filter(function(value){return value === module_name;}).length;
+
+        if( available < count ){
             //console.log("Error, could not find enough ", module_name, count, rockpool.available_modules.filter(function(value){return value === module_name;}).length);
-            return false;
+            status = false;
         }
+
+
+        for(var c = 0; c < count; c++){
+
+            var div = $('.modules').find('.' + module_name).filter(':eq(' + c + ')');
+
+            if( div.length == 0 ){
+                div = $('<div>').addClass(module_name)
+                $('<i>').addClass('icon-' + module_name).appendTo(div);
+                $('<strong>').text(module_name).appendTo(div);
+                div.appendTo('.modules');
+            }
+
+
+            div.toggleClass('missing', available < (c+1));
+
+        }
+
     }
     //console.log("Found enough ", module_name);
-    return true;
+    if(status){
+        $('.modules').hide();
+        rockpool.closePrompt();
+    }
+    else
+    {
+        $('.modules').show();
+        rockpool.prompt($('.modules'),true);
+    }
+    return status;
 }
 
 rockpool.updateActiveCookbookRecipes = function() {
@@ -312,8 +351,8 @@ rockpool.updateActiveCookbookRecipes = function() {
 /* Hook updatePalettes as it's called when a module is connected/disconnected */
 rockpool.updatePalettes = function(){
 
-    rockpool.updateAvailableCookbookModules();
-    rockpool.updateActiveCookbookRecipes();
+    //rockpool.updateAvailableCookbookModules();
+    //rockpool.updateActiveCookbookRecipes();
 
 
 }

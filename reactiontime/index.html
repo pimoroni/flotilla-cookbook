@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>Rockpool - Cookbook</title>
+        <title>Reaction Time - Flotilla Cookbook</title>
+        <link href='https://fonts.googleapis.com/css?family=Roboto' rel='stylesheet' type='text/css'>
         <link rel="stylesheet" href="http://flotil.la/rockpool/css/jquery.fancybox.min.css">
         <link rel="stylesheet" href="http://flotil.la/rockpool/css/pure-min.css">
         <link rel="stylesheet" href="http://flotil.la/rockpool/css/rockpool.css">
@@ -70,7 +71,7 @@
 
 
             .scoreboard {
-              background:#222222;
+              background:#000000;
               overflow:hidden;
               padding:5px;
               margin:5px;
@@ -81,10 +82,9 @@
             }
 
             .scoreboard div {
-              background:#333333;
+              background:#303040;
               width:3px;
               height:3px;
-              border-radius:50%;
               margin:1px;
               float:left;
             }
@@ -94,12 +94,16 @@
             }
 
             .scoreboard .lit {
-              background:#FFCC00;
+              background:#f8f800;
               box-shadow:0px 0px 8px rgba(255,200,0,0.5);
             }
 
             .scoreboard .clear {
               clear:left;
+            }
+
+            .virtualrainbow:before, .virtualrainbow:after {
+                background:#132240;
             }
         </style>
     </head>
@@ -108,6 +112,15 @@
             <div style="margin: 0px auto;width:100%;">
                 <div class="app">
                     <header><h1>Reaction Time</h1></header>
+                    <div class="virtualrainbow">
+                        <ul>   
+                            <li><span></span></li>
+                            <li><span></span></li>
+                            <li><span></span></li>
+                            <li><span></span></li>
+                            <li><span></span></li>
+                        </ul>
+                    </div>
 
                     <div class="reaction">
                     </div>
@@ -119,13 +132,14 @@
                         <li>4<span>P4</span></li>
                     </ul>
                 </div>
-                <div class="modules icon-palette">
-                    <header><h1>Modules</h1></header>
-                </div>
             </div>
         </div>
 
-        <div style="display:none;" class="palettes"></div>
+        <div style="display:none;" class="palettes">
+                <div class="modules icon-palette">
+                    <header><h1>Not So Fast!</h1></header>
+                    <p>You're going to need to plug in some modules before you play Reaction Time. Let's try a Touch module for input, and a Rainbow to show some pretty lights you can react to:</p>
+                </div></div>
 
         <script src="http://flotil.la/rockpool/js/lib/jquery-2.1.1.min.js"></script>
         <script src="http://flotil.la/rockpool/js/lib/fastclick.js"></script>
@@ -150,6 +164,31 @@
 
         <script>
             "use strict";
+
+            function updateVirtualRainbow(r, g, b){
+
+                    for(var x = 0; x < 15; x+=3){
+                        var l = Math.round(x / 3);
+
+                        var r = Math.round(r*255);
+                        var g = Math.round(g*255);
+                        var b = Math.round(b*255);
+
+                        $('.virtualrainbow li:eq(' + l + ') span').css({
+                            background:'rgb(' + [r,g,b].join(',') + ')',
+                            'box-shadow': '0px 0px 30px rgba(' + [r,g,b].join(',') + ', 0.4)'
+                        })
+
+                        if(r == 0 && g == 0 && b == 0){
+                           $('.virtualrainbow li:eq(' + l + ') span').css({
+                                background:'#EEEEEE',
+                                'box-shadow': 'none'
+                            })
+                        }
+
+                    }
+
+            }
 
 
 
@@ -315,6 +354,7 @@
                     self.rainbow.outputs.LED.data.g = g;
                     self.rainbow.outputs.LED.data.b = b;
                     self.rainbow.outputs.LED.data.brightness = 1.0;
+                    updateVirtualRainbow(r, g, b)
                 }
 
                 self.mainLoop = function(){

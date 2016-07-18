@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>Rockpool - Cookbook</title>
-        <link rel="stylesheet" href="../css/jquery.fancybox.min.css">
-        <link rel="stylesheet" href="../css/pure-min.css">
-        <link rel="stylesheet" href="../css/rockpool.css">
-        <link rel="stylesheet" href="cookbook.css">
+        <title>Mood Light - Cookbook</title>
+        <link href='https://fonts.googleapis.com/css?family=Roboto' rel='stylesheet' type='text/css'>
+        <link rel="stylesheet" href="http://flotil.la/rockpool/css/jquery.fancybox.min.css">
+        <link rel="stylesheet" href="http://flotil.la/rockpool/css/pure-min.css">
+        <link rel="stylesheet" href="http://flotil.la/rockpool/css/rockpool.css">
+        <link rel="stylesheet" href="../cookbook.css">
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
         <meta name="viewport" content="width = device-width, user-scalable = no, initial-scale = 1.0">
@@ -62,6 +63,8 @@
             .buttons li.on {
                 color:#00CC00;
             }
+
+            h1 { color:#FFFFFF;}
         </style>
     </head>
     <body>
@@ -77,37 +80,38 @@
                     <ul class="buttons">
                         <li>1<span>On/Off</span></li>
                         <li>2<span>Auto</span></li>
-                        <li>3<span>--</span></li>
-                        <li>4<span>++</span></li>
+                        <li>3<span>Hue--</span></li>
+                        <li>4<span>Hue++</span></li>
                     </ul>
-                </div>
-                <div class="modules icon-palette">
-                    <header><h1>Modules</h1></header>
                 </div>
             </div>
         </div>
 
-        <div style="display:none;" class="palettes"></div>
+        <div style="display:none;" class="palettes">
+                <div class="modules icon-palette">
+                    <header><h1>Before You Start</h1></header>
+                    <p>We'll need a couple of modules to make a Mood Light. Plug in a Rainbow for making light, and a Touch module to control it!:</p>
+                </div></div>
 
-        <script src="../js/lib/jquery-2.1.1.min.js"></script>
-        <script src="../js/lib/fastclick.js"></script>
-        <script src="../js/rockpool.js"></script>
-        <script src="../js/rockpool.languify.js"></script>
-        <script src="../js/socket.io.min.js"></script>
-        <script src="../js/rockpool.widget.js"></script>
-        <script src="../js/rockpool.rule.js"></script>
-        <script src="../js/rockpool.inputs.js"></script>
-        <script src="../js/rockpool.outputs.js"></script>
-        <script src="../js/rockpool.converters.js"></script>
-        <script src="../js/rockpool.palette.js"></script>
-        <script src="../js/rockpool.module.js"></script>
-        <script src="../js/rockpool.modules.js"></script>
-        <script src="../js/rockpool.client.js"></script>
-        <script src="../js/rockpool.save.js"></script>
-        <script src="../js/rockpool.find-hosts.worker.js"></script>
+        <script src="http://flotil.la/rockpool/js/lib/jquery-2.1.1.min.js"></script>
+        <script src="http://flotil.la/rockpool/js/lib/fastclick.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.languify.js"></script>
+        <script src="http://flotil.la/rockpool/js/socket.io.min.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.widget.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.rule.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.inputs.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.outputs.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.converters.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.palette.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.module.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.modules.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.client.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.save.js"></script>
+        <script src="http://flotil.la/rockpool/js/rockpool.find-hosts.worker.js"></script>
         <script src="../cookbook.js"></script>
 
-        <script src="../js/lib/jquery.fancybox.min.js"></script>
+        <script src="http://flotil.la/rockpool/js/lib/jquery.fancybox.min.js"></script>
 
         <script>
             "use strict";
