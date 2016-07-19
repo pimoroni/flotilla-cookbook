@@ -280,6 +280,7 @@
 
                     var slider = self.slider.inputs.position.data.position;
 
+
                     var d = (ms - self._start_time);
 
                     var wind_magnitude = ((d / 1000) % 60) / 60;
@@ -304,6 +305,15 @@
                     if( random(100,300) % 17 == 0 ){
                         self.wind_x = randomf(-wind_magnitude,wind_magnitude); // Big nasty wind forces!
                         ////console.log('Wind',self.wind_x);
+                    }
+
+
+                    var motion = rockpool.firstOfType('motion');
+                    if(motion != null){
+
+                        var x = (motion.inputs.steer.data.y - 0.5) * 2;
+                        self.wind_x = x * 0.9;
+
                     }
                     
                     if( self.wind_x < 0 ){
