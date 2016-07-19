@@ -370,11 +370,11 @@
                 if (bounds_left < 0 || bounds_right > this.field.width) {
                     var v = 0;
                     if(bounds_left < 0){
-                        player.increment_score();
+                        computer.increment_score();
                         v = 6;
                     }
                     if(bounds_right > this.field.width){
-                        computer.increment_score();
+                        player.increment_score();
                         v = -6;
                     }
                     this.velocity.x = v;
