@@ -18,14 +18,18 @@
                 display:inline-block;
                 color:#333;
                 font-size:25px;
-                width:140px;
+                width:125px;
                 text-align:center;
                 background:#FFF;
                 border-radius:10px;
                 line-height:50px;
+                margin-top:2px;
+    left: 14px;
+    position: relative;
             }
+            ul.stats .pressure {margin:2px 150px;}
 
-                        .lights {
+             .lights {
                 display:block;
                 width:710px;
                 height:100px;
@@ -100,13 +104,7 @@
         <div class="main">
             <div style="margin: 0px auto;width:100%;">
                 <div class="app">
-                    <header><h1>Diorama</h1></header>
-
-                    <ul class="stats">
-                        <li class="temperature"></li>
-                        <li class="pressure"></li>
-                        <li class="light"></li>
-                    </ul>
+                    <header><h1>Weather Station</h1></header>
                     <div class="lights">
                         <ul>   
                             <li><span></span></li>
@@ -116,6 +114,12 @@
                             <li><span></span></li>
                         </ul>
                     </div>
+
+                    <ul class="stats">
+                        <li class="temperature"></li>
+                        <li class="pressure"></li>
+                        <li class="light"></li>
+                    </ul>
                     <div class="diorama"></div>
                 </div>
                 <div class="modules icon-palette">
@@ -213,7 +217,9 @@
 
                     self.weather = rockpool.firstOfType('weather');
                     self.light = rockpool.firstOfType('light');
-                    self.rainbow = rockpool.firstOfType('rainbow');
+                    //self.rainbow = rockpool.firstOfType('rainbow');
+
+                    self.rainbow = cookbook.nthOfType('rainbow',0);
                     
                     self.interval = setInterval(self.mainLoop,100);
 
@@ -228,52 +234,103 @@
 
                 self.mainLoop = function(){
 
-                    var pressure = (self.weather.inputs.pressure.data.pressure / 1000.0 );
+                    var pressure = Math.round((self.weather.inputs.pressure.data.pressure / 100.0 ));
                     var temperature = (self.weather.inputs.temperature.data.temperature / 100.0);
                     var light = self.light.inputs.visible.data.vis;
 
-                    $('.stats .pressure').text(pressure + 'Pa');
+                    $('.stats .pressure').text(pressure + 'hPa');
                     $('.stats .temperature').html(temperature + '&deg;C');
                     $('.stats .light').text(light);
 
 
-                    /*
-                    If light level is less than 40, go white
-                    Otherwise,
-                        If temperature is greater than 25, go red
-                        If temperature is less than 18, go blue
-                        Otherwise, turn off
-                    */
+                    // Temperature Light Scaling
+                    var ideal_temp = 21;
+                    var ideal_temp_hue = 140;
 
-                    if(  light < 40 ){
-                        rainbow.outputs.LED.data.r = 1;
-                        rainbow.outputs.LED.data.g = 1;
-                        rainbow.outputs.LED.data.b = 1;
-                        rainbow.sync();
+                    var temp = temperature - ideal_temp;
+                    var temp_hue = 0;
+
+                    if(temp < 0){ // From 0 to -61
+                        // COLD!!!
+                        if(temp < -16) temp = -16;
+
+                         temp_hue = 140 - ((temp / 16) * 100);
+                    }
+                    else // From 0 to + 19
+                    {
+                        // WARM!!!
+                        if(temp > 11) temp = 11;
+
+                        temp_hue = 140 - ((temp / 11) * 140);
+                    }
+
+                    rainbow.set_pixel_hsv(0, temp_hue/360, 1.0, 0.5);
+
+
+                    // Pressure Light Scaling
+
+                    var ideal_pressure = 1000;
+                    var ideal_pressure_hue = 140;
+
+                    var warning_high_pressure = 1200 - ideal_pressure;
+                    var warning_low_pressure = 980 - ideal_pressure;
+
+
+                    var pres = pressure - ideal_pressure;
+                    var pres_hue = 0;
+
+                    if(pres < 0){
+                        if(pres < warning_low_pressure) pres = warning_low_pressure;
+
+                        pres_hue = ideal_pressure_hue - (pres / warning_low_pressure) * 100;
                     }
                     else
                     {
-                        if(temperature >= 25){
-                            rainbow.outputs.LED.data.r = 1;
-                            rainbow.outputs.LED.data.g = 0;
-                            rainbow.outputs.LED.data.b = 0;
-                            rainbow.sync();
-                        }
-                        else if(temperature <= 18){
-                            rainbow.outputs.LED.data.r = 0;
-                            rainbow.outputs.LED.data.g = 0;
-                            rainbow.outputs.LED.data.b = 1;
-                            rainbow.sync();
-                        }
-                        else {
-                            rainbow.outputs.LED.data.r = 0;
-                            rainbow.outputs.LED.data.g = 0;
-                            rainbow.outputs.LED.data.b = 0;
-                            rainbow.sync();
-                        }
+                        if(pres > warning_high_pressure) pres = warning_high_pressure;
+
+                        pres_hue = ideal_pressure_hue - (pres / warning_high_pressure) * 140;
+
                     }
 
-                    updateVirtualRainbow([rainbow.outputs.LED.data.r * 255, rainbow.outputs.LED.data.g * 255, rainbow.outputs.LED.data.b * 255]);
+                    rainbow.set_pixel_hsv(2, pres_hue/360, 1.0, 0.5);
+
+                    // Light Light Scaling
+
+                    var ideal_light = 200;
+                    var ideal_light_hue = 140;
+
+                    var warning_high_light = 2000 - ideal_light;
+                    var warning_low_light = 0 - ideal_light;
+
+
+                    var lig = light - ideal_light;
+                    var light_hue = 0;
+
+                    if(lig < 0){
+                        if(lig < warning_low_light) lig = warning_low_light;
+
+                        light_hue = ideal_light_hue + (lig / warning_low_light) * 100;
+                    }
+                    else
+                    {
+                        if(lig > warning_high_light) lig = warning_high_light;
+
+                        light_hue = ideal_light_hue - (lig / warning_high_light) * 140;
+
+                    }
+
+                    rainbow.set_pixel_hsv(4, light_hue/360, 1.0, 0.5);
+
+
+
+
+
+
+
+
+                    rainbow.show();
+
+                    updateVirtualRainbow(rainbow.buf);
 
                 }
 
