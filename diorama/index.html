@@ -232,9 +232,9 @@
                     var temperature = (self.weather.inputs.temperature.data.temperature / 100.0);
                     var light = self.light.inputs.visible.data.vis;
 
-                    $('.pressure').text(pressure + 'Pa');
-                    $('.temperature').html(temperature + '&deg;C');
-                    $('.light').text(light);
+                    $('.stats .pressure').text(pressure + 'Pa');
+                    $('.stats .temperature').html(temperature + '&deg;C');
+                    $('.stats .light').text(light);
 
 
                     /*
