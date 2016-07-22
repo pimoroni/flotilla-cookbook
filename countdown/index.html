@@ -12,7 +12,6 @@
         <meta name="viewport" content="width = device-width, user-scalable = no, initial-scale = 1.0">
 
         <style type="text/css">
-            body {background:#000000;}
             
             .buttons, .buttons li {
                 list-style:none;
@@ -57,9 +56,13 @@
                 width:700px;
                 height:300px;
                 background:#0F1013;
-                padding:10px 50px;
+                padding:20px 50px;
                 margin:0 auto;
                 position:relative;
+                border: 20px solid #f6f5e3;
+                border-bottom-color: #93928d;
+                border-right-color: #b0afa4;
+                border-top-color: #f4f3eb;
             }
             .countdown:before, .countdown:after {
                 content:'';
@@ -67,7 +70,7 @@
                 width:20px;
                 height:20px;
                 border-radius:50%;
-                background:#313014;
+                background:#212004;
                 left:50%;
                 top:50%;
                 position:absolute;
@@ -79,7 +82,7 @@
                 margin-top:65px;
             }
             .countdown.lit:before, .countdown.lit:after {
-                background:#EFEDCF;
+                background:#FFFDDF;
             }
             .digit {
                 position:relative;
@@ -105,33 +108,33 @@
                 display:block;
                 position:absolute;
             }
-            .digit .top {border-top-color:#313014;width:90px;left:10px;top:0;}
-            .digit .top.lit {border-top-color:#EFEDCF}
+            .digit .top {border-top-color:#212004;width:90px;left:10px;top:0;}
+            .digit .top.lit {border-top-color:#FFFDDF}
 
-            .digit .bottom {border-bottom-color:#313014;width:90px;left:10px;bottom:0px;}
-            .digit .bottom.lit {border-bottom-color:#EFEDCF}
+            .digit .bottom {border-bottom-color:#212004;width:90px;left:10px;bottom:0px;}
+            .digit .bottom.lit {border-bottom-color:#FFFDDF}
 
-            .digit .top-left {border-left-color:#313014;height:90px;left:0px;top:10px;}
-            .digit .top-left.lit {border-left-color:#EFEDCF}
+            .digit .top-left {border-left-color:#212004;height:90px;left:0px;top:10px;}
+            .digit .top-left.lit {border-left-color:#FFFDDF}
 
-            .digit .top-right {border-right-color:#313014;height:90px;right:0px;top:10px;}
-            .digit .top-right.lit {border-right-color:#EFEDCF}
+            .digit .top-right {border-right-color:#212004;height:90px;right:0px;top:10px;}
+            .digit .top-right.lit {border-right-color:#FFFDDF}
 
-            .digit .bottom-left {border-left-color:#313014;height:90px;left:0px;top:160px;}
-            .digit .bottom-left.lit {border-left-color:#EFEDCF}
+            .digit .bottom-left {border-left-color:#212004;height:90px;left:0px;top:160px;}
+            .digit .bottom-left.lit {border-left-color:#FFFDDF}
 
-            .digit .bottom-right {border-right-color:#313014;height:90px;right:0px;top:160px;}
-            .digit .bottom-right.lit {border-right-color:#EFEDCF}
+            .digit .bottom-right {border-right-color:#212004;height:90px;right:0px;top:160px;}
+            .digit .bottom-right.lit {border-right-color:#FFFDDF}
 
-            .digit .middle {background-color:#313014;height:20px;border:none;width:110px;left:20px;top:140px;}
-            .digit .middle.lit {background-color:#EFEDCF}
+            .digit .middle {background-color:#212004;height:20px;border:none;width:110px;left:20px;top:140px;}
+            .digit .middle.lit {background-color:#FFFDDF}
 
             .digit .middle:before, 
-            .digit .middle:after {content:'';display:block;border:10px solid transparent;border-right-color:#313014;position:absolute;top:0;left:-20px;}
-            .digit .middle:before {left:auto;right:-20px;border-left-color:#313014;border-right-color:transparent;}
+            .digit .middle:after {content:'';display:block;border:10px solid transparent;border-right-color:#212004;position:absolute;top:0;left:-20px;}
+            .digit .middle:before {left:auto;right:-20px;border-left-color:#212004;border-right-color:transparent;}
 
-            .digit .middle.lit:after {border-right-color:#EFEDCF;}
-            .digit .middle.lit:before {border-left-color:#EFEDCF;}
+            .digit .middle.lit:after {border-right-color:#FFFDDF;}
+            .digit .middle.lit:before {border-left-color:#FFFDDF;}
         </style>
     </head>
     <body>
@@ -180,10 +183,10 @@
                     </div>
 
                     <ul class="buttons">
-                        <li>1<span>Start</span></li>
-                        <li>2<span>Stop/Clr</span></li>
-                        <li>3<span>+min</span></li>
-                        <li>4<span>+sec</span></li>
+                        <li>1<span>start</span></li>
+                        <li>2<span>clear</span></li>
+                        <li>3<span>+ min</span></li>
+                        <li>4<span>+ sec</span></li>
                     </ul>
                 </div>
             </div>
@@ -230,16 +233,13 @@
                 self.last_touch_one = false;
                 self.last_touch_two = false;
 
-                self.mins = 1;
-                self.secs = 11;
-
-                self.start_mins = 0;
+                self.secs = 60;
                 self.start_secs = 0;
-
-                self.last_mins = 0;
                 self.last_secs = 0;
 
                 self.timer_running = false;
+
+                self.time_out = false;
 
                 self.last_values = [0,0,0,0];
 
@@ -250,8 +250,8 @@
                     if(self.running) return false;
                     self.running = true;
 
-                    self.touch = rockpool.firstOfType('touch');
-                    self.rainbow = rockpool.firstOfType('number');
+                    self.touch = cookbook.nthOfType('touch', 0);
+                    self.number = cookbook.nthOfType('number', 0);
 
                     self.interval = setInterval(self.mainLoop,100);
 
@@ -315,18 +315,32 @@
                 }
 
                 self.is_touched = function(button){
-                    var value = touch.inputs.button.data[button] > 0;
-                    if( value && self.last_values[button] != value ){
-                        self.last_values[button] = value;
-                        return true;
-                    }
-                    return false;
+                    return self.touch.changed(button) && self.touch.touched(button);
+                }
+
+                self.timer_clear = function(){
+                    self.time_out = false;
+                    self.secs = -1;
+                }
+
+                self.timer_stop = function(){
+                    if(self.timer_running == false) self.timer_clear();
+                    self.timer_running = false;
+                    self.time_out = false;
+                }
+
+                self.timer_add_seconds = function(s){
+                    if(self.secs == -1) self.secs = 0;
+                    self.secs += s;
                 }
 
                 self.timer_start = function(){
+                    if(self.secs <= 0) return false;
+                    
+                    self.time_out = false;
+
                     self.timer_running = true;
                     self.start_millis = millis();
-                    self.start_mins = self.mins;
                     self.start_secs = self.secs;
                 }
 
@@ -335,48 +349,105 @@
 
                     var delta = (millis() - self.start_millis) / 1000; // Total running time in seconds
 
-                    var num_secs = (self.start_mins * 60) + self.start_secs; // Total number of seconds on the clock
+                    var num_secs = self.start_secs; // Total number of seconds on the clock
 
                     var new_secs = num_secs - delta; // Remaining time in seconds
 
                     //console.log(new_secs, new_secs % 59, new_secs / 60);
 
                     if(new_secs > -1){
-                        self.secs = Math.floor(new_secs % 60);
-                        self.mins = Math.floor(new_secs / 60);
+                        self.secs = new_secs;
                     }
                 }
 
                 self.mainLoop = function(){
 
-                    var touched_one   = self.is_touched(1);
-                    var touched_two   = self.is_touched(2);
-                    var touched_three = self.is_touched(3);
-                    var touched_four  = self.is_touched(4);
+                    var start      = self.is_touched(1);
+                    var stop_clear = self.is_touched(2);
+                    var add_minute = self.is_touched(3);
+                    var add_second = self.is_touched(4);
 
-                    $('.buttons li:eq(0)').toggleClass('active', touched_one);
-                    $('.buttons li:eq(1)').toggleClass('active', touched_two);
-                    $('.buttons li:eq(2)').toggleClass('active', touched_three);
-                    $('.buttons li:eq(3)').toggleClass('active', touched_four);
+                    $('.buttons li:eq(0)').toggleClass('active', start);
+                    $('.buttons li:eq(1)').toggleClass('active', stop_clear);
+                    $('.buttons li:eq(2)').toggleClass('active', add_minute);
+                    $('.buttons li:eq(3)').toggleClass('active', add_second);
 
-                    if(touched_one){ 
+                    if(start){ 
                         self.timer_start();
+                    }else if(stop_clear){
+                        self.timer_stop();
+                    }else if(add_minute){
+                        self.timer_add_seconds(60);
+                    }else if(add_second){
+                        self.timer_add_seconds(1);
+                    }
+
+
+                    if(self.timer_running){
+                        $('.buttons li:eq(1) span').text('stop');
+                    }
+                    else
+                    {
+                        $('.buttons li:eq(1) span').text('clear');
                     }
 
                     self.timer_update();
 
-                    if(self.secs != self.last_secs || self.mins != self.last_mins){
+                    if(self.time_out){
+                        var digit = Math.round((millis() / 500)) % 2 == 0 ? 0 : -1;
+
+                        display_digit(0, digit);
+                        display_digit(1, digit);
+
+                        display_digit(2, digit);
+                        display_digit(3, digit);
+
+
+                        self.number.colon = digit == 0;
+                        self.number.set(digit == 0 ? "0000" : "    ");
+                        self.number.show();
+
+                        $('.countdown').toggleClass('lit', digit == 0);
+
+                        return;
+                    }
+
+                    if(self.secs != self.last_secs){
+
+                        var _mins = Math.floor(self.secs / 60);
+                        var _secs = self.secs % 60;
                         
-                        display_digit(0, Math.floor(self.mins / 10.0));
-                        display_digit(1, self.mins % 10);
+                        var d1 = Math.floor(_mins / 10.0);
+                        var d2 = Math.floor(_mins % 10);
+                        var d3 = Math.floor(_secs / 10.0);
+                        var d4 = Math.floor(_secs % 10);
 
-                        display_digit(2, Math.floor(self.secs / 10.0));
-                        display_digit(3, self.secs % 10);
+                        display_digit(0, d1);
+                        display_digit(1, d2);
 
-                        $('.countdown').toggleClass('lit', self.secs % 2 == 0);
+                        display_digit(2, d3);
+                        display_digit(3, d4);
 
-                        self.last_mins = self.mins;
+                        if(self.secs >= 0){
+                            self.number.set(d1.toString() + d2.toString() + d3.toString() + d4.toString());
+                        }
+                        else
+                        {
+                            self.number.set("    ");
+                        }
+
+                        self.number.colon = Math.floor(self.secs % 2) == 0;
+
+                        self.number.show();
+
+                        $('.countdown').toggleClass('lit', Math.floor(self.secs % 2) == 0);
+
                         self.last_secs = self.secs;
+                    }
+
+                    if(self.secs <= 0 && self.timer_running){
+                        self.timer_stop();
+                        self.time_out = true;
                     }
 
 
