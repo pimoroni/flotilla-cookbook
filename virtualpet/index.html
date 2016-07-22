@@ -17,6 +17,25 @@
             text-transform: lowercase;
             color:#333;
             line-height:20px;
+            margin:2px;
+        }
+
+        .color {
+            position:absolute;
+            right:10px;
+            top:10px;
+            width:60px;
+            height:60px;
+            border-radius:30px;
+        }
+        .color:before {
+            content:'color';
+            position:absolute;
+            width:60px;
+            line-height:60px;
+            text-align:center;
+            left:0;
+            top:0px;
         }
 
         .stage {
@@ -109,27 +128,26 @@
 
     var foods = [
         {'name':'orange', 'compare':function(r,g,b){
-
-            if( similar(r,255,10) && similar(g,182,10) && similar(b,13,10) ){
-                //console.log( 'Oraanngeeee! ' );
+            if( r == 255 && g < 130 && b < 70){
+                //console.log( 'Orange!' );
                 return true;
             }
             return false;
         }},
         {'name':'bannana','compare':function(r,g,b){
-            if( similar(r,85,10) && similar(g,90,10) && similar(b,65,10) ){
-                //console.log( 'Bannanananan! ' );
-                return true; // Kinda yellow?
+            if( r == 255 && g > 180 && b > 70 && b < 110){
+                //console.log('Banana');
+                return true;
             }
             return false;
         }},
-        /*{'name':'apple', 'compare':function(r,g,b){
-            if( similar(r,85,10) && similar(g,95,10) && similar(b,65,10) ){
-                //console.log( 'Bannanananan! ' );
+        {'name':'apple', 'compare':function(r,g,b){
+            if( r == 255 && (g - b) < -20 ){
+                //console.log( 'Apple! ' );
                 return true; // Kinda yellow?
             }
             return false;
-        }}*/
+        }}
     ];
 
     var alive      = false
@@ -176,7 +194,7 @@
         if( weight == 0 || weight > max_stat*0.8 ) adjust_health(-1);
 
         // Good health equals happiness
-        if( health > max_stat*0.8) adjust_health(1);
+        if( health > max_stat*0.8) adjust_happy(1);
 
         // Sadness equals bad health
         if( happy == 0 ) adjust_health(-1);
@@ -192,7 +210,7 @@
         adjust_happy(-1);
         adjust_hunger(2);
 
-        fail();
+        //fail();
 
     }
 
@@ -209,7 +227,7 @@
     }
 
     var change_mode = function(new_mode){
-        console.log('New mode? ', new_mode);
+        //console.log('New mode? ', new_mode);
         if(modes[new_mode] != null){
             mode = modes[new_mode];
             mode_start = 0;
@@ -232,15 +250,18 @@
             adjust_clean(-$('.poop:visible').length);
 
             // Overweight, eek!
-            if( weight == max_stat ){
+            /*if( weight == max_stat ){
                 adjust_health(-1);
-            }
+            }*/
 
-            if( clean < 2 ) adjust_happy(-1);
+            if( mode == modes['sick'] || mode == modes['hungry'] ) adjust_happy(-1);
 
             if( hunger == max_stat ){
                 adjust_weight(-1);
                 adjust_happy(-1);
+            }
+            else {
+                adjust_health(1);
             }
         }
 
@@ -254,8 +275,6 @@
                     mode_start = 0;
                     change_mode('normal');
                 }
-
-                adjust_happy(-1);
 
                 break;
             case modes['sad']:
@@ -288,7 +307,7 @@
                 }
 
                 if(happy < 2) change_mode('sad');
-                if(health < 2) change_mode('sick');
+                if(clean < 2) change_mode('sick');
 
                 break;
             case modes['toilet']:
@@ -353,7 +372,7 @@
                 if( mode_start == 0 ){
                     mode_start = millis();
                     
-                    wants_food = random(0,foods.length);
+                    wants_food = random(0,foods.length-1);
 
                 }
 
@@ -437,38 +456,35 @@
 
     }
 
-    var snack = function(){
-
-        // Snacking promotes weight gain & happiness
-        adjust_weight(1);
-        adjust_happy(1);
-
-    }
-
     var feed = function(selected_food){
 
         //console.log('Om nom nom', selected_food, food);
+        var name = foods[selected_food].name;
 
-        if(selected_food == food){
-            adjust_hunger(-1);
+        //console.log("Feeding", name);
+
+        if(selected_food == wants_food){
+            //adjust_hunger(-1);
+            self.hunger = 0;
             food = null;
         }
         else
         {
-                //console.log('SNACK!');
+            // Feeding promotes weight gain
             adjust_happy(1);
+            adjust_weight(1);
+            adjust_hunger(-1);
         }
-
-        // Feeding promotes weight gain
-        adjust_hunger(-1);
-        adjust_weight(1);
 
     }
 
     var medicine = function(){
 
-        if( health < 10 ){
-            health += 1;
+        adjust_health(1);
+
+        if(clean < max_stat) {
+            adjust_clean(1);
+            adjust_happy(-1);
         }
 
     }
@@ -622,16 +638,17 @@
             })
             .appendTo(dom);
         bar_css = {display:'block',height:20,backgroundColor:'rgba(255,255,255,0.9)'};
+        $('<div>').addClass('color').appendTo(dom);
         bars = $('<div>')
             .css({width:200})
             .appendTo(dom)
-            .append($('<div>').addClass('stat_bar').css(bar_css).addClass('health').text('HP'))
-            .append($('<div>').addClass('stat_bar').css(bar_css).addClass('hunger').text('Hunger'))
-            .append($('<div>').addClass('stat_bar').css(bar_css).addClass('clean').text('Clean'))
-            .append($('<div>').addClass('stat_bar').css(bar_css).addClass('happy').text('Happy'))
-            .append($('<div>').addClass('stat_bar').css(bar_css).addClass('weight').text('Weight'))
-            .append($('<div>').addClass('stat_bar').css(bar_css).addClass('age').text('Age'))
-            .append($('<div>').addClass('stat_bar').css(bar_css).addClass('color').text('Color'));
+            .append(mkstarbar('health','Health'))
+            .append(mkstarbar('hunger','Hunger'))
+            .append(mkstarbar('clean','Clean'))
+            .append(mkstarbar('happy','Happy'))
+            .append(mkstarbar('weight','Weight'))
+            .append(mkstarbar('age','Age'))
+            //.append(mkstarbar('color','Color'));
         $('.stage').append(dom);
 
 
@@ -648,6 +665,11 @@
 
 
 
+    var mkstarbar = function(c, text){
+        var statbar = $('<div><span>').addClass('stat_bar').css(bar_css).addClass(c);
+        statbar.find('span').text(text);
+        return statbar;
+    }
 
 
 
@@ -666,24 +688,38 @@
 
             };
 
+            var last_food = null;
+            var last_detect = 0;
+
+
             //on(4, 'colour', 'change', function(){
             events['colour'] = function(r, g, b){
 
+                if( dom ){
+                    dom.find('.color').css({
+                        backgroundColor:'rgb(' + [r,g,b].join(',') + ')'
+                    });
+                }
+
                 //console.log(r, g, b);
+                var found_food = f;
 
                 for(var f = 0; f < foods.length; f++){
                     if( foods[f].compare(r,g,b) ){
-                        feed(foods[f].name);
+                        found_food = f;
                         break;
                     }
 
                 }
 
-                if( bars ){
-                    bars.find('.color').css({
-                        backgroundColor:'rgb(' + [r,g,b].join(',') + ')',
-                        width:'100%'
-                    });
+                if(last_food != null && found_food == last_food && millis() - last_detect > 500){
+                    feed(found_food);
+                    last_food = null;
+                }
+                else if(last_food == null)
+                {
+                    last_food = found_food;
+                    last_detect = millis();
                 }
 
             };
