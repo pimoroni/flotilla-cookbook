@@ -127,6 +127,14 @@ and provide a clean, consistent object with methods for getting/setting values.
 
 */
 cookbook.wrappers = {
+    'weather': function(module){
+        this.temperature = function(){
+            return module.inputs.temperature.data.temperature / 100;
+        }
+        this.pressure = function(){
+            return module.inputs.pressure.data.pressure / 100;
+        }
+    },
     'number': function(module) {
 
         this.number = "0000";
