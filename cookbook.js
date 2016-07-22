@@ -127,6 +127,70 @@ and provide a clean, consistent object with methods for getting/setting values.
 
 */
 cookbook.wrappers = {
+    'number': function(module) {
+
+        this.number = "0000";
+        this.brightness = 50;
+        this.colon = 0;
+        this.apostrophe = 0;
+
+        this.set = function(number){
+            number = number.toString();
+
+            if(number.charAt(2) == ":"){
+                this.colon = 1;
+                number = number.replace(":","");
+            }
+
+            this.number = number;
+        }
+
+        this.show = function(){
+
+            var display = [0,0,0,0,0,0,0]; // 7 bytes, char 1-4, colon, apostrophe and brightness
+
+            for(var x = 0; x<this.number.length; x++){
+
+                var ord = this.number.charCodeAt(x) - 48;
+
+                if( ord >= 0 && ord < number_digit_map.length){
+                    display[x] = number_digit_map[ord];
+                }
+
+            }
+
+            display[4] = this.colon ? 1 : 0; // Colon
+            display[5] = this.apostrophe ? 1 : 0; // Apostrophe
+
+            display[6] = this.brightness; // Brightness
+
+            rockpool.sendHostUpdate(module.host, module.channel + 1, module.code, display);
+
+        }
+
+    },
+    'touch': function(module){
+
+        this.last = [false,false,false,false];
+
+        this.one   = function(){return this.touched[1]}
+        this.two   = function(){return this.touched[2]}
+        this.three = function(){return this.touched[3]}
+        this.four  = function(){return this.touched[4]}
+
+        this.touched = function(button){
+            return module.inputs.button.data[button] > 0
+        }
+
+        this.changed = function(button){
+            var touched = this.touched(button);
+            var last = this.last[button];
+            this.last[button] = touched;
+
+            return touched != last
+        }
+
+    },
     'rainbow': function(module){
 
         this.buf = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
