@@ -34,6 +34,31 @@
                 left:auto;
                 right:10px;
             }
+
+            .colour, .colour li {margin:0;padding:0;list-style:none;}
+            .colour li {
+                width:100px;
+                height:100px;
+                border-radius:50%;
+                border:10px solid #000000;
+                display:inline-block;
+            }
+            .colour {
+                text-align:center;
+                padding-top:80px;
+            }
+            .colour .red {
+                background:#FF0000;
+            }
+            .colour .green {
+                background:#00FF00;
+            }
+            .colour .blue {
+                background:#0000FF;
+            }
+            .colour .selected {
+                border-color:#FFFFFF;
+            }
         </style>
     </head>
     <body>
@@ -43,6 +68,11 @@
                 <div class="stage">
                     <div class="light_l"></div>
                     <div class="light_r"></div>
+                    <ul class="colour">
+                            <li class="red" data-colour="red"></li>
+                            <li class="green" data-colour="green"></li>
+                            <li class="blue" data-colour="blue"></li>
+                    </ul>
                 </div>
             </div>
         </div>
@@ -90,10 +120,23 @@
                 self.motor_l = null;
                 self.motor_r = null;
 
+                self.history_l = [];
+                self.history_r = [];
+
                 self.light_l = null;
                 self.light_r = null;
 
                 self.rainbow = null;
+
+                self.colours = {
+                            'red':  [255,0,0,900],
+                            'green':[0,255,0,1400],
+                            'blue': [0,0,255,1400]}
+
+                self.current_colour = 'red';
+
+                self.forward_speed = 30;
+                self.threshold = 0.90;
 
                 self.run = function(){
 
@@ -112,9 +155,21 @@
                     self.rainbow = cookbook.nthOfType('rainbow',0);
 
 
+                    $('.colour').off('click').on('click', 'li', function(){
+                        var col = $(this).data('colour');
+
+                        $('.colour li').removeClass('selected');
+                        $(this).addClass('selected');
+
+                        self.current_colour = col;
+                    });
+
+                    $('.colour .' + self.current_colour).addClass('selected');
+
+
                     self.interval = setInterval(self.mainLoop,50);
 
-                    $(window).on('beforeunload',function(){
+                    $(window).on('beforeunload unload',function(){
                         self.motor_l.speed(0);
                         self.motor_r.speed(0);
                         self.rainbow.clear();
@@ -128,6 +183,14 @@
                     self.running = false;
                     clearInterval(self.interval);
 
+                }
+
+                self.round = function(x, dp){
+                    return Math.round(x * 100) / 100;
+                }
+
+                self.avg = function(a){
+                    return a.reduce(function(a,b){return a+b;}) / a.length;
                 }
 
                 self.mainLoop = function(){
@@ -146,31 +209,66 @@
 
                     //console.log("Running...", d);
 
-                    console.log(self.light_l.light(), self.light_r.light());
+                    //console.log(self.light_l.light(), self.light_r.light());
 
-                    self.rainbow.set_all(0, 0, 255);
+                    var col = self.colours[self.current_colour];
+
+                    self.rainbow.set_all(col[0], col[1], col[2]);
                     self.rainbow.show();
 
 
-                    var level_l = self.light_l.light() / 1400.0;
-                    var level_r = self.light_r.light() / 1400.0;
+                    var level_l = self.light_l.light() / col[3];
+                    var level_r = self.light_r.light() / col[3];
 
                     if(level_l > 1.0) level_l = 1.0;
                     if(level_r > 1.0) level_r = 1.0;
 
-                    self.dom_light_l.css('background','rgba(255,255,255,' + level_l + ')').text(level_l);
-                    self.dom_light_r.css('background','rgba(255,255,255,' + level_r + ')').text(level_r);
+                    self.history_l.push(level_l);
+                    self.history_r.push(level_r);
+                    self.history_l = self.history_l.slice(-5);
+                    self.history_r = self.history_r.slice(-5);
+
+                    self.dom_light_l.css('background','rgba(255,255,255,' + level_l + ')').text(self.round(level_l));
+                    self.dom_light_r.css('background','rgba(255,255,255,' + level_r + ')').text(self.round(level_r));
 
                     self.motor_l.speed(0);
                     self.motor_r.speed(0);
 
-                    if(level_l  > 0.75){
-                            self.motor_l.speed(30);
+                    //self.motor_l.speed(self.forward_speed);
+                    //self.motor_r.speed(-self.forward_speed);
+
+/*
+                    var avg_l = self.avg(self.history_l);
+                    var avg_r = self.avg(self.history_r);
+                    //console.log(avg_l, avg_r);
+
+                    var min_l = Math.min.apply(null, self.history_l);
+                    var min_r = Math.min.apply(null, self.history_r);
+
+                    var max_l = Math.max.apply(null, self.history_l);
+                    var max_r = Math.max.apply(null, self.history_r);
+
+
+                    var scale_l = (level_l - min_l) / max_l - min_l;
+                    var scale_r = (level_r - min_r) / max_r - min_r;
+
+*/
+                    var scale_l = (level_l-0.7) * 3.33;
+                    var scale_r = (level_r-0.7) * 3.33;
+
+                    //if(scale_l < 0) scale_l = 0;
+                    //if(scale_r < 0) scale_r = 0;
+
+                    self.motor_l.speed(self.forward_speed * scale_l);
+                    self.motor_r.speed(-self.forward_speed * scale_r);
+
+                    /*if(level_l  < (avg_l * self.threshold)){
+                            self.motor_l.speed(0);
                     }
 
-                    if(level_r  > 0.75){
-                            self.motor_r.speed(-30);
-                    }
+                    if(level_r  < (avg_r * self.threshold)){
+                            self.motor_r.speed(0);
+                    }*/
 
                 }
 
