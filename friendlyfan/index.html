@@ -248,6 +248,10 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#2989d8', end
 
                     self.interval = setInterval(self.mainLoop,1000/60);
 
+                    $(window).on('beforeunload unload',function(){
+                        self.motor.speed(0);
+                    });
+
                 }
 
                 self.stop = function(){
