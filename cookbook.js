@@ -159,7 +159,7 @@ cookbook.wrappers = {
 
             for(var x = 0; x<this.number.length; x++){
 
-                var ord = this.number.charCodeAt(x) - 48;
+                var ord = this.number.charCodeAt(x) - 45;
 
                 if( ord >= 0 && ord < number_digit_map.length){
                     display[x] = number_digit_map[ord];
